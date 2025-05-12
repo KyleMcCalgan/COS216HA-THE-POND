@@ -57,12 +57,10 @@ function handleUpdateDrone($data) {
     // Latest latitude and longitude
     if (isset($data['latest_latitude']) && isset($data['latest_longitude'])) {
         // Validate coordinates (must be within 5km radius of HQ)
-        global $hqLatitude, $hqLongitude;
         $latestLatitude = floatval($data['latest_latitude']);
         $latestLongitude = floatval($data['latest_longitude']);
         
-        $distance = calculateDistance($hqLatitude, $hqLongitude, $latestLatitude, $latestLongitude);
-        if ($distance > 5000) {
+        if (!isWithinRange($latestLatitude, $latestLongitude)) {
             apiResponse(false, null, 'Drone location is outside the 5km operation radius.');
             exit;
         }

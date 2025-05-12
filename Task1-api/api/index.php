@@ -53,6 +53,12 @@ switch ($actionType) {
         require_once './handlers/login_handler.php';
         handleLogin($postData);
         break;
+    
+    //helper function for testing purposes
+    case 'createUser':
+        require_once './handlers/create_user_handler.php';
+        handleCreateUser($postData);
+        break;
         
     case 'createOrder':
         require_once './handlers/create_order_handler.php';
@@ -63,10 +69,18 @@ switch ($actionType) {
         require_once './handlers/update_order_handler.php';
         handleUpdateOrder($postData);
         break;
-        
+    
+    //has some funky functionality when used by a courier it gets all, when used by 
+    //a user it gets only their orders
     case 'getAllOrders':
         require_once './handlers/get_all_orders_handler.php';
         handleGetAllOrders($postData);
+        break;
+
+    //additional case not in spec
+    case 'getOrder':
+        require_once './handlers/get_order_handler.php';
+        handleGetOrder($postData);
         break;
         
     case 'createDrone':
@@ -88,7 +102,13 @@ switch ($actionType) {
         require_once './handlers/test_handler.php';
         handleTest();
         break;
-        
+    
+    //additional helper case not in spec
+    case 'getAllCouriers':
+        require_once './handlers/get_all_couriers_handler.php';
+        handleGetAllCouriers($postData);
+        break;
+
     default:
         apiResponse(false, null, 'Invalid action type: ' . $actionType);
         break;

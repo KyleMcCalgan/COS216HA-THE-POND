@@ -67,3 +67,10 @@ function apiResponse($success, $data = null, $message = '') {
     echo json_encode($response);
     exit;
 }
+
+function isWithinRange($latitude, $longitude) {
+    global $hqLatitude, $hqLongitude, $maxRange;
+    
+    $distance = calculateDistance($hqLatitude, $hqLongitude, $latitude, $longitude);
+    return $distance <= 5000;
+}
