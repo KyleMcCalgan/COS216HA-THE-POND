@@ -1,0 +1,24 @@
+<div class="operator-container">
+  <h2>Operator Dashboard</h2>
+  
+  <h3>Drone Status</h3>
+  <div class="drones-list">
+    <div class="drone-card" *ngFor="let drone of drones">
+      <p><strong>Drone ID:</strong> {{ drone.id }}</p>
+      <p><strong>Available:</strong> {{ drone.isAvailable ? 'Yes' : 'No' }}</p>
+      <p><strong>Battery Level:</strong> {{ drone.batteryLevel }}%</p>
+      <p><strong>Operator:</strong> {{ drone.operator || 'None' }}</p>
+      <button (click)="selectDrone(drone.id)" [disabled]="!drone.isAvailable">Select Drone</button>
+    </div>
+  </div>
+
+  <h3>Orders Due for Delivery</h3>
+  <div class="orders-list">
+    <div class="order-card" *ngFor="let order of orders">
+      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+      <p><strong>Status:</strong> {{ order.status }}</p>
+      <button (click)="loadOrder(order.orderId)" [disabled]="order.status !== 'Storage'">Load Order</button>
+    </div>
+  </div>
+</div>
