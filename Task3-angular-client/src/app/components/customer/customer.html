@@ -1,0 +1,12 @@
+<div class="customer-container">
+  <h2>Customer Dashboard</h2>
+  <h3>Your Outstanding Orders</h3>
+  <div class="orders-list">
+    <div class="order-card" *ngFor="let order of orders">
+      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+      <p><strong>Status:</strong> {{ order.status }}</p>
+      <button (click)="requestDelivery(order.orderId)" [disabled]="order.status !== 'Storage'">Request Delivery</button>
+    </div>
+  </div>
+</div>
