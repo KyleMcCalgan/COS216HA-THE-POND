@@ -1,0 +1,11 @@
+<div class="order-history-container">
+  <h2>Order History</h2>
+  <div class="orders-list">
+    <div class="order-card" *ngFor="let order of orderHistory">
+      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+      <p><strong>Status:</strong> {{ order.status }}</p>
+      <p><strong>Delivery Date:</strong> {{ order.deliveryDate }}</p>
+    </div>
+  </div>
+</div>

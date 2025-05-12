@@ -1,36 +1,48 @@
 .operator-container {
-  max-width: 800px;
-  margin: 20px auto;
+  background-color: #FFF0EB; /* Background color */
+  min-height: 100vh;
   padding: 20px;
   text-align: center;
 }
 
-h2, h3 {
-  color: #333;
+h2 {
+  color: #3E1314; /* Second color for headers */
+  margin-bottom: 20px;
 }
 
-.drones-list, .orders-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+h3 {
+  color: #4D9948; /* First color for section headers */
+  margin-bottom: 15px;
+}
+
+.section {
   margin-bottom: 30px;
 }
 
-.drone-card, .order-card {
+.orders-list, .dispatched-drones {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.order-card, .drone-card {
   border: 1px solid #ccc;
   border-radius: 5px;
   padding: 15px;
-  background-color: #f9f9f9;
+  background-color: white;
   text-align: left;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
-.drone-card p, .order-card p {
+.order-card p, .drone-card p {
   margin: 5px 0;
+  color: #3E1314; /* Second color for text */
 }
 
 button {
   padding: 8px 16px;
-  background-color: #007bff;
+  background-color: #4D9948; /* First color for buttons */
   color: white;
   border: none;
   border-radius: 4px;
@@ -38,10 +50,13 @@ button {
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #3E7A3A; /* Darker shade of first color */
 }
 
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.order-history-btn {
+  background-color: #3E1314; /* Second color for Order History button */
+}
+
+.order-history-btn:hover {
+  background-color: #2A0D0E; /* Darker shade of second color */
 }

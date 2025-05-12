@@ -1,31 +1,39 @@
 // src/app/components/operator/operator.component.ts
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-operator',
   standalone: true,
+  imports: [CommonModule],
   templateUrl: './operator.html',
   styleUrls: ['./operator.css']
 })
 export class OperatorComponent {
-  // Placeholder for drones and orders (to be fetched from API later)
-  drones = [
-    { id: 1, isAvailable: true, batteryLevel: 100, operator: null },
-    { id: 2, isAvailable: false, batteryLevel: 60, operator: 'JohnDoe' }
+  outstandingOrders = [
+    { orderId: '', products: [], status: '' }
   ];
 
-  orders = [
-    { orderId: 'CS-1234567890', products: ['Book', 'Pen'], status: 'Storage' },
-    { orderId: 'CS-0987654321', products: ['Laptop Charger'], status: 'Storage' }
+  dispatchedDrones = [
+    { id: 0, isAvailable: false, batteryLevel: 0, operator: '' }
   ];
 
-  selectDrone(droneId: number) {
-    alert(`Drone ${droneId} selected`);
-    // Later, this will handle drone selection logic
+  constructor(private router: Router) {}
+
+  viewOrderHistory() {
+    this.router.navigate(['/operator/order-history']);
   }
 
-  loadOrder(orderId: string) {
-    alert(`Order ${orderId} loaded onto drone`);
-    // Later, this will handle loading orders onto the drone
+  viewDispatchedOrders() {
+    this.router.navigate(['/operator/dispatched-orders']);
+  }
+
+  trackOrder(orderId: string) {
+    this.router.navigate(['/operator/track', orderId]);
+  }
+
+  processOrder(orderId: string) {
+    this.router.navigate(['/operator/dispatch', orderId]); // Fixed typo: 'dispatched' to 'dispatch'
   }
 }

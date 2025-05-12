@@ -1,0 +1,11 @@
+<div class="dispatched-orders-container">
+  <h2>Dispatched Orders</h2>
+  <div class="orders-list">
+    <div class="order-card" *ngFor="let order of dispatchedOrders">
+      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+      <p><strong>Status:</strong> {{ order.status }}</p>
+      <button (click)="trackOrder(order.orderId)">Track</button>
+    </div>
+  </div>
+</div>

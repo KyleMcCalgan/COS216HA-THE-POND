@@ -1,0 +1,32 @@
+.order-history-container {
+  background-color: #FFF0EB;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+}
+
+h2 {
+  color: #3E1314;
+  margin-bottom: 20px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.history-card {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: white;
+  text-align: left;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.history-card p {
+  margin: 5px 0;
+  color: #3E1314;
+}
