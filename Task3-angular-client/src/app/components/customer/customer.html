@@ -3,9 +3,9 @@
   <h3>Your Outstanding Orders</h3>
   <div class="orders-list">
     <div class="order-card" *ngFor="let order of orders">
-      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
-      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
-      <p><strong>Status:</strong> {{ order.status }}</p>
+      <p><strong>Order ID:</strong> CS156989788908077</p><!--{{ order.orderId }}-->
+      <p><strong>Products:</strong>  Apple sauce, Pie</p><!--{{ order.products.join(', ')}}-->
+      <p><strong>Status:</strong> Success</p><!--{{ order.status }}-->
       <button (click)="requestDelivery(order.orderId)" [disabled]="order.status !== 'Storage'">Request Delivery</button>
     </div>
   </div>
