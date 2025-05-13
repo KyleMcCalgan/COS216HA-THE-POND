@@ -10,6 +10,8 @@ TEST is a folder used to test a nodejs server
 currently you can use it to test out all of the API cases 
 start the server by running the following:
     -make sure nodejs v20.19.1 is installed
+    -install what ever additional pages dont work most likely:
+        - npm install express http ws path axios body-parser readline cors
     -make sure xampp is running to make use of the API currently
     -run cd TEST
     -npm install

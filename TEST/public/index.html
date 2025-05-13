@@ -4,133 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Couriers API Test Client</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .api-info {
-            background-color: #e0f7fa;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .panel {
-            flex: 1;
-            min-width: 400px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-
-        .api-section {
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-        }
-
-        .api-section h3 {
-            margin-top: 0;
-            color: #0066cc;
-        }
-
-        .input-group {
-            margin-bottom: 10px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: #0066cc;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background-color: #0055aa;
-        }
-
-        #response {
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            min-height: 200px;
-            max-height: 600px;
-            overflow-y: auto;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .nav-button {
-            background-color: #555;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .nav-button:hover {
-            background-color: #444;
-        }
-
-        .nav-button.active {
-            background-color: #0066cc;
-        }
-
-        .section-content {
-            display: none;
-        }
-
-        .section-content.active {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>Couriers API Test Client</h1>
@@ -144,6 +18,7 @@
         <button class="nav-button" data-section="users">Users</button>
         <button class="nav-button" data-section="orders">Orders</button>
         <button class="nav-button" data-section="drones">Drones</button>
+        <button class="nav-button" data-section="debug">Debug</button>
     </div>
 
     <div class="container">
@@ -360,6 +235,99 @@
                     <button id="updateDroneBtn">Update Drone</button>
                 </div>
             </div>
+
+            <!-- Debug Section -->
+            <div class="section-content" id="debug">
+                <div class="api-section">
+                    <h3>WebSocket Status</h3>
+                    <div id="websocket-status">Not connected</div>
+                    <button id="connectWebSocketBtn">Connect WebSocket</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Server Information</h3>
+                    <button id="getServerInfoBtn">Get Server Info</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Active Users</h3>
+                    <div id="active-users-container">
+                        <div class="debug-table-wrapper">
+                            <table id="active-users-table">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>User Type</th>
+                                        <th>User ID</th>
+                                        <th>Connected At</th>
+                                        <th>Last Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="active-users">
+                                    <tr>
+                                        <td colspan="5">No active users</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>Orders Being Delivered</h3>
+                    <div id="orders-container">
+                        <div class="debug-table-wrapper">
+                            <table id="orders-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer ID</th>
+                                        <th>Tracking Number</th>
+                                        <th>Start Time</th>
+                                        <th>Destination</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="delivering-orders">
+                                    <tr>
+                                        <td colspan="5">No orders being delivered</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>Recent Database Changes</h3>
+                    <div id="db-changes-container">
+                        <div class="debug-table-wrapper">
+                            <table id="db-changes-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Operation</th>
+                                        <th>Success</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db-changes">
+                                    <tr>
+                                        <td colspan="4">No database changes recorded</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>Server Log</h3>
+                    <div id="server-log-container">
+                        <pre id="server-log">No server log entries yet.</pre>
+                    </div>
+                    <button id="clearLogBtn">Clear Log</button>
+                </div>
+            </div>
         </div>
 
         <div class="panel">
@@ -368,244 +336,6 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get API connection info
-            fetch('/api/connection-info')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('api-url-display').textContent = `Connected to API: ${data.apiUrl}`;
-                })
-                .catch(error => {
-                    document.getElementById('api-url-display').textContent = `Error connecting to API: ${error.message}`;
-                });
-                
-            // Navigation
-            const navButtons = document.querySelectorAll('.nav-button');
-            const sections = document.querySelectorAll('.section-content');
-
-            navButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const sectionId = this.getAttribute('data-section');
-                    
-                    // Remove active class from all buttons and sections
-                    navButtons.forEach(btn => btn.classList.remove('active'));
-                    sections.forEach(section => section.classList.remove('active'));
-                    
-                    // Add active class to clicked button and corresponding section
-                    this.classList.add('active');
-                    document.getElementById(sectionId).classList.add('active');
-                });
-            });
-
-            // Function to make API requests
-            async function makeApiRequest(data) {
-                const responseElement = document.getElementById('response');
-                responseElement.textContent = 'Sending request...';
-                
-                try {
-                    const response = await fetch('/api/proxy', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    const result = await response.json();
-                    responseElement.textContent = JSON.stringify(result, null, 2);
-                    return result;
-                } catch (error) {
-                    responseElement.textContent = `Error: ${error.message}`;
-                    console.error('Error making API request:', error);
-                }
-            }
-
-            // Test Connection
-            document.getElementById('testConnectionBtn').addEventListener('click', function() {
-                makeApiRequest({ type: 'test' });
-            });
-
-            // Login
-            document.getElementById('loginBtn').addEventListener('click', function() {
-                const username = document.getElementById('loginUsername').value;
-                const password = document.getElementById('loginPassword').value;
-                
-                makeApiRequest({ 
-                    type: 'login',
-                    username: username,
-                    password: password
-                });
-            });
-
-            // Create User
-            document.getElementById('createUserBtn').addEventListener('click', function() {
-                const username = document.getElementById('createUsername').value;
-                const password = document.getElementById('createPassword').value;
-                const email = document.getElementById('createEmail').value;
-                const userType = document.getElementById('createUserType').value;
-                
-                makeApiRequest({ 
-                    type: 'createUser',
-                    username: username,
-                    password: password,
-                    email: email,
-                    user_type: userType
-                });
-            });
-
-            // Get All Couriers
-            document.getElementById('getAllCouriersBtn').addEventListener('click', function() {
-                makeApiRequest({ type: 'getAllCouriers' });
-            });
-
-            // Create Order
-            document.getElementById('createOrderBtn').addEventListener('click', function() {
-                const customerId = document.getElementById('orderCustomerId').value;
-                const destLat = document.getElementById('orderDestLat').value;
-                const destLong = document.getElementById('orderDestLong').value;
-                const productsInput = document.getElementById('orderProducts').value;
-                
-                let products;
-                try {
-                    products = JSON.parse(productsInput);
-                } catch (e) {
-                    document.getElementById('response').textContent = `Error parsing products JSON: ${e.message}`;
-                    return;
-                }
-                
-                makeApiRequest({ 
-                    type: 'createOrder',
-                    customer_id: parseInt(customerId),
-                    destination_latitude: parseFloat(destLat),
-                    destination_longitude: parseFloat(destLong),
-                    products: products
-                });
-            });
-
-            // Get All Orders
-            document.getElementById('getAllOrdersBtn').addEventListener('click', function() {
-                const userId = document.getElementById('getAllOrdersUserId').value;
-                const userType = document.getElementById('getAllOrdersUserType').value;
-                
-                makeApiRequest({ 
-                    type: 'getAllOrders',
-                    user_id: parseInt(userId),
-                    user_type: userType
-                });
-            });
-
-            // Get Specific Order
-            document.getElementById('getOrderBtn').addEventListener('click', function() {
-                const customerId = document.getElementById('getOrderCustomerId').value;
-                const orderId = document.getElementById('getOrderId').value;
-                
-                makeApiRequest({ 
-                    type: 'getOrder',
-                    customer_id: parseInt(customerId),
-                    order_id: parseInt(orderId)
-                });
-            });
-
-            // Update Order
-            document.getElementById('updateOrderBtn').addEventListener('click', function() {
-                const customerId = document.getElementById('updateOrderCustomerId').value;
-                const orderId = document.getElementById('updateOrderId').value;
-                const destLat = document.getElementById('updateOrderDestLat').value;
-                const destLong = document.getElementById('updateOrderDestLong').value;
-                const state = document.getElementById('updateOrderState').value;
-                
-                const data = {
-                    type: 'updateOrder',
-                    customer_id: parseInt(customerId),
-                    order_id: parseInt(orderId)
-                };
-                
-                // Only add fields that have values
-                if (destLat && destLong) {
-                    data.destination_latitude = parseFloat(destLat);
-                    data.destination_longitude = parseFloat(destLong);
-                }
-                
-                if (state) {
-                    data.state = state;
-                }
-                
-                makeApiRequest(data);
-            });
-
-            // Create Drone
-            document.getElementById('createDroneBtn').addEventListener('click', function() {
-                const isAvailable = document.getElementById('droneIsAvailable').value === 'true';
-                const latitude = document.getElementById('droneLatitude').value;
-                const longitude = document.getElementById('droneLongitude').value;
-                const altitude = document.getElementById('droneAltitude').value;
-                const batteryLevel = document.getElementById('droneBatteryLevel').value;
-                const operatorId = document.getElementById('droneOperatorId').value;
-                
-                const data = {
-                    type: 'createDrone',
-                    is_available: isAvailable,
-                    latest_latitude: parseFloat(latitude),
-                    latest_longitude: parseFloat(longitude),
-                    altitude: parseFloat(altitude),
-                    battery_level: parseInt(batteryLevel)
-                };
-                
-                if (operatorId) {
-                    data.current_operator_id = parseInt(operatorId);
-                }
-                
-                makeApiRequest(data);
-            });
-
-            // Get All Drones
-            document.getElementById('getAllDronesBtn').addEventListener('click', function() {
-                makeApiRequest({ type: 'getAllDrones' });
-            });
-
-            // Update Drone
-            document.getElementById('updateDroneBtn').addEventListener('click', function() {
-                const droneId = document.getElementById('updateDroneId').value;
-                const isAvailable = document.getElementById('updateDroneIsAvailable').value;
-                const latitude = document.getElementById('updateDroneLatitude').value;
-                const longitude = document.getElementById('updateDroneLongitude').value;
-                const altitude = document.getElementById('updateDroneAltitude').value;
-                const batteryLevel = document.getElementById('updateDroneBatteryLevel').value;
-                const operatorId = document.getElementById('updateDroneOperatorId').value;
-                
-                const data = {
-                    type: 'updateDrone',
-                    id: parseInt(droneId)
-                };
-                
-                // Only add fields that have values
-                if (isAvailable !== '') {
-                    data.is_available = isAvailable === 'true';
-                }
-                
-                if (latitude && longitude) {
-                    data.latest_latitude = parseFloat(latitude);
-                    data.latest_longitude = parseFloat(longitude);
-                }
-                
-                if (altitude) {
-                    data.altitude = parseFloat(altitude);
-                }
-                
-                if (batteryLevel) {
-                    data.battery_level = parseInt(batteryLevel);
-                }
-                
-                if (operatorId === 'null') {
-                    data.current_operator_id = null;
-                } else if (operatorId) {
-                    data.current_operator_id = parseInt(operatorId);
-                }
-                
-                makeApiRequest(data);
-            });
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
