@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Couriers API Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .api-info {
+            background-color: #e0f7fa;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .panel {
+            flex: 1;
+            min-width: 400px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .api-section {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .api-section h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0055aa;
+        }
+
+        #response {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .nav-button:hover {
+            background-color: #444;
+        }
+
+        .nav-button.active {
+            background-color: #0066cc;
+        }
+
+        .section-content {
+            display: none;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Couriers API Test Client</h1>
+    
+    <div class="api-info">
+        <p id="api-url-display">Connecting to API...</p>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="nav-button active" data-section="connection">Connection Test</button>
+        <button class="nav-button" data-section="users">Users</button>
+        <button class="nav-button" data-section="orders">Orders</button>
+        <button class="nav-button" data-section="drones">Drones</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <!-- Connection Test Section -->
+            <div class="section-content active" id="connection">
+                <div class="api-section">
+                    <h3>Test Database Connection</h3>
+                    <button id="testConnectionBtn">Test Connection</button>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div class="section-content" id="users">
+                <div class="api-section">
+                    <h3>Login</h3>
+                    <div class="input-group">
+                        <label for="loginUsername">Username:</label>
+                        <input type="text" id="loginUsername" value="admin">
+                    </div>
+                    <div class="input-group">
+                        <label for="loginPassword">Password:</label>
+                        <input type="password" id="loginPassword" value="admin">
+                    </div>
+                    <button id="loginBtn">Login</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Create User</h3>
+                    <div class="input-group">
+                        <label for="createUsername">Username:</label>
+                        <input type="text" id="createUsername" value="testuser">
+                    </div>
+                    <div class="input-group">
+                        <label for="createPassword">Password:</label>
+                        <input type="password" id="createPassword" value="password123">
+                    </div>
+                    <div class="input-group">
+                        <label for="createEmail">Email:</label>
+                        <input type="email" id="createEmail" value="test@example.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="createUserType">User Type:</label>
+                        <select id="createUserType">
+                            <option value="Customer">Customer</option>
+                            <option value="Courier">Courier</option>
+                            <option value="Distributor">Distributor</option>
+                        </select>
+                    </div>
+                    <button id="createUserBtn">Create User</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Get All Couriers</h3>
+                    <button id="getAllCouriersBtn">Get All Couriers</button>
+                </div>
+            </div>
+
+            <!-- Orders Section -->
+            <div class="section-content" id="orders">
+                <div class="api-section">
+                    <h3>Create Order</h3>
+                    <div class="input-group">
+                        <label for="orderCustomerId">Customer ID:</label>
+                        <input type="number" id="orderCustomerId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="orderDestLat">Destination Latitude:</label>
+                        <input type="text" id="orderDestLat" value="25.7500">
+                    </div>
+                    <div class="input-group">
+                        <label for="orderDestLong">Destination Longitude:</label>
+                        <input type="text" id="orderDestLong" value="28.2480">
+                    </div>
+                    <div class="input-group">
+                        <label for="orderProducts">Products (JSON format):</label>
+                        <input type="text" id="orderProducts" value='[{"id": 1, "quantity": 2}, {"id": 2, "quantity": 1}]'>
+                    </div>
+                    <button id="createOrderBtn">Create Order</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Get All Orders</h3>
+                    <div class="input-group">
+                        <label for="getAllOrdersUserId">User ID:</label>
+                        <input type="number" id="getAllOrdersUserId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="getAllOrdersUserType">User Type:</label>
+                        <select id="getAllOrdersUserType">
+                            <option value="Courier">Courier</option>
+                            <option value="Customer">Customer</option>
+                        </select>
+                    </div>
+                    <button id="getAllOrdersBtn">Get All Orders</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Get Specific Order</h3>
+                    <div class="input-group">
+                        <label for="getOrderCustomerId">Customer ID:</label>
+                        <input type="number" id="getOrderCustomerId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="getOrderId">Order ID:</label>
+                        <input type="number" id="getOrderId" value="1">
+                    </div>
+                    <button id="getOrderBtn">Get Order</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Update Order</h3>
+                    <div class="input-group">
+                        <label for="updateOrderCustomerId">Customer ID:</label>
+                        <input type="number" id="updateOrderCustomerId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateOrderId">Order ID:</label>
+                        <input type="number" id="updateOrderId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateOrderDestLat">Destination Latitude (optional):</label>
+                        <input type="text" id="updateOrderDestLat" value="25.7490">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateOrderDestLong">Destination Longitude (optional):</label>
+                        <input type="text" id="updateOrderDestLong" value="28.2500">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateOrderState">State (optional):</label>
+                        <select id="updateOrderState">
+                            <option value="Storage">Storage</option>
+                            <option value="Out_for_delivery">Out for Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                        </select>
+                    </div>
+                    <button id="updateOrderBtn">Update Order</button>
+                </div>
+            </div>
+
+            <!-- Drones Section -->
+            <div class="section-content" id="drones">
+                <div class="api-section">
+                    <h3>Create Drone</h3>
+                    <div class="input-group">
+                        <label for="droneIsAvailable">Is Available:</label>
+                        <select id="droneIsAvailable">
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="droneLatitude">Latitude:</label>
+                        <input type="text" id="droneLatitude" value="25.7472">
+                    </div>
+                    <div class="input-group">
+                        <label for="droneLongitude">Longitude:</label>
+                        <input type="text" id="droneLongitude" value="28.2511">
+                    </div>
+                    <div class="input-group">
+                        <label for="droneAltitude">Altitude:</label>
+                        <input type="number" id="droneAltitude" value="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="droneBatteryLevel">Battery Level (0-100):</label>
+                        <input type="number" id="droneBatteryLevel" value="100" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="droneOperatorId">Operator ID (optional):</label>
+                        <input type="number" id="droneOperatorId" placeholder="Leave empty for no operator">
+                    </div>
+                    <button id="createDroneBtn">Create Drone</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Get All Drones</h3>
+                    <button id="getAllDronesBtn">Get All Drones</button>
+                </div>
+
+                <div class="api-section">
+                    <h3>Update Drone</h3>
+                    <div class="input-group">
+                        <label for="updateDroneId">Drone ID:</label>
+                        <input type="number" id="updateDroneId" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneIsAvailable">Is Available (optional):</label>
+                        <select id="updateDroneIsAvailable">
+                            <option value="">-- No Change --</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneLatitude">Latitude (optional):</label>
+                        <input type="text" id="updateDroneLatitude" placeholder="Leave empty to not update">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneLongitude">Longitude (optional):</label>
+                        <input type="text" id="updateDroneLongitude" placeholder="Leave empty to not update">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneAltitude">Altitude (optional):</label>
+                        <input type="number" id="updateDroneAltitude" placeholder="Leave empty to not update">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneBatteryLevel">Battery Level (optional, 0-100):</label>
+                        <input type="number" id="updateDroneBatteryLevel" placeholder="Leave empty to not update" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="updateDroneOperatorId">Operator ID (optional):</label>
+                        <input type="text" id="updateDroneOperatorId" placeholder="Leave empty to not update, use 'null' to remove">
+                    </div>
+                    <button id="updateDroneBtn">Update Drone</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>API Response</h3>
+            <pre id="response">No response yet. Click any API button to test.</pre>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get API connection info
+            fetch('/api/connection-info')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('api-url-display').textContent = `Connected to API: ${data.apiUrl}`;
+                })
+                .catch(error => {
+                    document.getElementById('api-url-display').textContent = `Error connecting to API: ${error.message}`;
+                });
+                
+            // Navigation
+            const navButtons = document.querySelectorAll('.nav-button');
+            const sections = document.querySelectorAll('.section-content');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const sectionId = this.getAttribute('data-section');
+                    
+                    // Remove active class from all buttons and sections
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    sections.forEach(section => section.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding section
+                    this.classList.add('active');
+                    document.getElementById(sectionId).classList.add('active');
+                });
+            });
+
+            // Function to make API requests
+            async function makeApiRequest(data) {
+                const responseElement = document.getElementById('response');
+                responseElement.textContent = 'Sending request...';
+                
+                try {
+                    const response = await fetch('/api/proxy', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    responseElement.textContent = JSON.stringify(result, null, 2);
+                    return result;
+                } catch (error) {
+                    responseElement.textContent = `Error: ${error.message}`;
+                    console.error('Error making API request:', error);
+                }
+            }
+
+            // Test Connection
+            document.getElementById('testConnectionBtn').addEventListener('click', function() {
+                makeApiRequest({ type: 'test' });
+            });
+
+            // Login
+            document.getElementById('loginBtn').addEventListener('click', function() {
+                const username = document.getElementById('loginUsername').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                makeApiRequest({ 
+                    type: 'login',
+                    username: username,
+                    password: password
+                });
+            });
+
+            // Create User
+            document.getElementById('createUserBtn').addEventListener('click', function() {
+                const username = document.getElementById('createUsername').value;
+                const password = document.getElementById('createPassword').value;
+                const email = document.getElementById('createEmail').value;
+                const userType = document.getElementById('createUserType').value;
+                
+                makeApiRequest({ 
+                    type: 'createUser',
+                    username: username,
+                    password: password,
+                    email: email,
+                    user_type: userType
+                });
+            });
+
+            // Get All Couriers
+            document.getElementById('getAllCouriersBtn').addEventListener('click', function() {
+                makeApiRequest({ type: 'getAllCouriers' });
+            });
+
+            // Create Order
+            document.getElementById('createOrderBtn').addEventListener('click', function() {
+                const customerId = document.getElementById('orderCustomerId').value;
+                const destLat = document.getElementById('orderDestLat').value;
+                const destLong = document.getElementById('orderDestLong').value;
+                const productsInput = document.getElementById('orderProducts').value;
+                
+                let products;
+                try {
+                    products = JSON.parse(productsInput);
+                } catch (e) {
+                    document.getElementById('response').textContent = `Error parsing products JSON: ${e.message}`;
+                    return;
+                }
+                
+                makeApiRequest({ 
+                    type: 'createOrder',
+                    customer_id: parseInt(customerId),
+                    destination_latitude: parseFloat(destLat),
+                    destination_longitude: parseFloat(destLong),
+                    products: products
+                });
+            });
+
+            // Get All Orders
+            document.getElementById('getAllOrdersBtn').addEventListener('click', function() {
+                const userId = document.getElementById('getAllOrdersUserId').value;
+                const userType = document.getElementById('getAllOrdersUserType').value;
+                
+                makeApiRequest({ 
+                    type: 'getAllOrders',
+                    user_id: parseInt(userId),
+                    user_type: userType
+                });
+            });
+
+            // Get Specific Order
+            document.getElementById('getOrderBtn').addEventListener('click', function() {
+                const customerId = document.getElementById('getOrderCustomerId').value;
+                const orderId = document.getElementById('getOrderId').value;
+                
+                makeApiRequest({ 
+                    type: 'getOrder',
+                    customer_id: parseInt(customerId),
+                    order_id: parseInt(orderId)
+                });
+            });
+
+            // Update Order
+            document.getElementById('updateOrderBtn').addEventListener('click', function() {
+                const customerId = document.getElementById('updateOrderCustomerId').value;
+                const orderId = document.getElementById('updateOrderId').value;
+                const destLat = document.getElementById('updateOrderDestLat').value;
+                const destLong = document.getElementById('updateOrderDestLong').value;
+                const state = document.getElementById('updateOrderState').value;
+                
+                const data = {
+                    type: 'updateOrder',
+                    customer_id: parseInt(customerId),
+                    order_id: parseInt(orderId)
+                };
+                
+                // Only add fields that have values
+                if (destLat && destLong) {
+                    data.destination_latitude = parseFloat(destLat);
+                    data.destination_longitude = parseFloat(destLong);
+                }
+                
+                if (state) {
+                    data.state = state;
+                }
+                
+                makeApiRequest(data);
+            });
+
+            // Create Drone
+            document.getElementById('createDroneBtn').addEventListener('click', function() {
+                const isAvailable = document.getElementById('droneIsAvailable').value === 'true';
+                const latitude = document.getElementById('droneLatitude').value;
+                const longitude = document.getElementById('droneLongitude').value;
+                const altitude = document.getElementById('droneAltitude').value;
+                const batteryLevel = document.getElementById('droneBatteryLevel').value;
+                const operatorId = document.getElementById('droneOperatorId').value;
+                
+                const data = {
+                    type: 'createDrone',
+                    is_available: isAvailable,
+                    latest_latitude: parseFloat(latitude),
+                    latest_longitude: parseFloat(longitude),
+                    altitude: parseFloat(altitude),
+                    battery_level: parseInt(batteryLevel)
+                };
+                
+                if (operatorId) {
+                    data.current_operator_id = parseInt(operatorId);
+                }
+                
+                makeApiRequest(data);
+            });
+
+            // Get All Drones
+            document.getElementById('getAllDronesBtn').addEventListener('click', function() {
+                makeApiRequest({ type: 'getAllDrones' });
+            });
+
+            // Update Drone
+            document.getElementById('updateDroneBtn').addEventListener('click', function() {
+                const droneId = document.getElementById('updateDroneId').value;
+                const isAvailable = document.getElementById('updateDroneIsAvailable').value;
+                const latitude = document.getElementById('updateDroneLatitude').value;
+                const longitude = document.getElementById('updateDroneLongitude').value;
+                const altitude = document.getElementById('updateDroneAltitude').value;
+                const batteryLevel = document.getElementById('updateDroneBatteryLevel').value;
+                const operatorId = document.getElementById('updateDroneOperatorId').value;
+                
+                const data = {
+                    type: 'updateDrone',
+                    id: parseInt(droneId)
+                };
+                
+                // Only add fields that have values
+                if (isAvailable !== '') {
+                    data.is_available = isAvailable === 'true';
+                }
+                
+                if (latitude && longitude) {
+                    data.latest_latitude = parseFloat(latitude);
+                    data.latest_longitude = parseFloat(longitude);
+                }
+                
+                if (altitude) {
+                    data.altitude = parseFloat(altitude);
+                }
+                
+                if (batteryLevel) {
+                    data.battery_level = parseInt(batteryLevel);
+                }
+                
+                if (operatorId === 'null') {
+                    data.current_operator_id = null;
+                } else if (operatorId) {
+                    data.current_operator_id = parseInt(operatorId);
+                }
+                
+                makeApiRequest(data);
+            });
+        });
+    </script>
+</body>
+</html>
