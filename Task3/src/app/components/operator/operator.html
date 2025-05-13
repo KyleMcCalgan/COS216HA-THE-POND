@@ -1,0 +1,29 @@
+<div class="operator-container">
+      <h2>Operator Dashboard</h2>
+
+      <div class="section">
+        <h3>Outstanding Orders</h3>
+        <div class="orders-list">
+          <div class="order-card" *ngFor="let order of outstandingOrders">
+            <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+            <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+            <p><strong>Status:</strong> {{ order.status }}</p>
+            <button (click)="processOrder(order.orderId)" [disabled]="order.status === 'Out_for_delivery'">Process</button>
+            <button (click)="trackOrder(order.orderId)" [disabled]="order.status !== 'Out_for_delivery'">Track</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section dispatched-drones">
+        <h3>Dispatched Drones</h3>
+        <div class="drone-card" *ngFor="let drone of dispatchedDrones">
+          <p><strong>Drone ID:</strong> {{ drone.id }}</p>
+          <p><strong>Operator:</strong> {{ drone.operator }}</p>
+          <button (click)="viewDispatchedOrders()">Drone Record</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <button class="order-history-btn" (click)="viewOrderHistory()">Order History</button>
+      </div>
+    </div>

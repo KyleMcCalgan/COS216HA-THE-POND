@@ -1,0 +1,15 @@
+.customer-container {
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 20px;
+}
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.order-card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+}
