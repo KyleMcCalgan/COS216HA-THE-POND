@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier System Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+            max-width: 400px;
+        }
+        .wide-panel {
+            flex: 2;
+        }
+        button, input {
+            margin: 5px 0;
+            padding: 8px;
+        }
+        button {
+            cursor: pointer;
+        }
+        #messageLog {
+            height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .response {
+            color: blue;
+        }
+        .info {
+            color: #333;
+        }
+        .command {
+            color: purple;
+        }
+        .separator {
+            border-top: 1px dashed #ccc;
+            margin: 15px 0;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+        }
+        #server-commands {
+            margin-top: 20px;
+        }
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        select {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connected {
+            background-color: green;
+        }
+        .status-disconnected {
+            background-color: red;
+        }
+        .status-text {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Courier System Test Client</h1>
+    
+    <div class="text-center">
+        <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+        <span class="status-text" id="statusText">Disconnected</span>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Connection</h2>
+            <div>
+                <label for="serverUrl">Server URL:</label>
+                <input type="text" id="serverUrl" value="ws://localhost:6969" style="width: 200px;">
+                <button id="connectBtn">Connect</button>
+                <button id="disconnectBtn" disabled>Disconnect</button>
+            </div>
+            
+            <div class="separator"></div>
+            
+            <h2>Login</h2>
+            <div>
+                <label for="username">Username:</label>
+                <input type="text" id="username">
+                <br>
+                <label for="password">Password:</label>
+                <input type="password" id="password">
+                <br>
+                <button id="loginBtn" disabled>Login</button>
+            </div>
+            
+            <div class="separator"></div>
+            
+            <h2>API Actions</h2>
+            <div>
+                <button id="testApiBtn" disabled>Test API Connection</button>
+                <button id="getOrdersBtn" disabled>Get All Orders</button>
+                <button id="getDronesBtn" disabled>Get All Drones</button>
+            </div>
+            
+            <div class="separator"></div>
+            
+            <h2>Server Commands</h2>
+            <div id="server-commands">
+                <label for="commandSelect">Select Command:</label>
+                <select id="commandSelect" style="width: 100%;">
+                    <option value="TEST_API">Test API Connection</option>
+                    <option value="CURRENTLY_DELIVERING">Currently Delivering</option>
+                    <option value="DRONE_STATUS">Drone Status</option>
+                    <option value="LIST_CLIENTS">List Connected Clients</option>
+                    <option value="KILL">Kill Connection (needs username)</option>
+                </select>
+                
+                <div id="commandParamsContainer" style="display: none; margin-top: 10px;">
+                    <label for="commandParam">Username:</label>
+                    <input type="text" id="commandParam" style="width: 100%;">
+                </div>
+                
+                <button id="runCommandBtn" disabled style="width: 100%; margin-top: 10px;">Run Command</button>
+            </div>
+        </div>
+        
+        <div class="panel wide-panel">
+            <h2>Messages</h2>
+            <button id="clearLogBtn">Clear Log</button>
+            <button id="expandAllBtn">Expand All JSON</button>
+            <button id="collapseAllBtn">Collapse All JSON</button>
+            <div id="messageLog"></div>
+        </div>
+    </div>
+
+    <script>
+        // Elements
+        const serverUrlInput = document.getElementById('serverUrl');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const testApiBtn = document.getElementById('testApiBtn');
+        const getOrdersBtn = document.getElementById('getOrdersBtn');
+        const getDronesBtn = document.getElementById('getDronesBtn');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const messageLog = document.getElementById('messageLog');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const expandAllBtn = document.getElementById('expandAllBtn');
+        const collapseAllBtn = document.getElementById('collapseAllBtn');
+        const commandSelect = document.getElementById('commandSelect');
+        const commandParamsContainer = document.getElementById('commandParamsContainer');
+        const commandParam = document.getElementById('commandParam');
+        const runCommandBtn = document.getElementById('runCommandBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        
+        let socket = null;
+        let loggedIn = false;
+        let expandedState = false;
+        
+        // Show/hide command parameters based on selected command
+        commandSelect.addEventListener('change', () => {
+            if (commandSelect.value === 'KILL') {
+                commandParamsContainer.style.display = 'block';
+            } else {
+                commandParamsContainer.style.display = 'none';
+            }
+        });
+        
+        // Log message to message log
+        function logMessage(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = type;
+            
+            const timestamp = document.createElement('span');
+            timestamp.textContent = `[${new Date().toLocaleTimeString()}] `;
+            
+            const content = document.createElement('span');
+            
+            // Pretty-print JSON objects
+            if (typeof message === 'object') {
+                // Create an expandable section for JSON
+                const toggleBtn = document.createElement('button');
+                toggleBtn.textContent = '+ ';
+                toggleBtn.style.border = 'none';
+                toggleBtn.style.background = 'none';
+                toggleBtn.style.color = 'inherit';
+                toggleBtn.style.cursor = 'pointer';
+                toggleBtn.style.padding = '0 5px';
+                
+                const jsonPre = document.createElement('pre');
+                jsonPre.style.display = 'none';
+                jsonPre.textContent = JSON.stringify(message, null, 2);
+                
+                const summary = document.createElement('span');
+                summary.textContent = getSummary(message);
+                
+                toggleBtn.addEventListener('click', () => {
+                    if (jsonPre.style.display === 'none') {
+                        jsonPre.style.display = 'block';
+                        toggleBtn.textContent = '- ';
+                    } else {
+                        jsonPre.style.display = 'none';
+                        toggleBtn.textContent = '+ ';
+                    }
+                });
+                
+                content.appendChild(toggleBtn);
+                content.appendChild(summary);
+                entry.appendChild(timestamp);
+                entry.appendChild(content);
+                entry.appendChild(jsonPre);
+                messageLog.appendChild(entry);
+            } else {
+                content.textContent = message;
+                entry.appendChild(timestamp);
+                entry.appendChild(content);
+                messageLog.appendChild(entry);
+            }
+            
+            messageLog.scrollTop = messageLog.scrollHeight;
+        }
+        
+        // Get a summary of a JSON object
+        function getSummary(obj) {
+            if (obj.action) {
+                return `${obj.action} - ${obj.success ? 'Success' : 'Failed'}${obj.message ? ': ' + obj.message : ''}`;
+            } else if (obj.type) {
+                return `${obj.type}${obj.message ? ': ' + obj.message : ''}`;
+            } else {
+                return JSON.stringify(obj).substring(0, 50) + '...';
+            }
+        }
+        
+        // Format and display received JSON data
+        function displayResponse(data) {
+            logMessage(data, 'response');
+        }
+        
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            statusIndicator.className = connected ? 
+                'status-indicator status-connected' : 
+                'status-indicator status-disconnected';
+            statusText.textContent = connected ? 'Connected' : 'Disconnected';
+        }
+        
+        // Connect to WebSocket server
+        connectBtn.addEventListener('click', () => {
+            try {
+                const serverUrl = serverUrlInput.value;
+                socket = new WebSocket(serverUrl);
+                
+                logMessage(`Connecting to ${serverUrl}...`);
+                
+                socket.onopen = () => {
+                    logMessage('Connected to server', 'success');
+                    updateConnectionStatus(true);
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    loginBtn.disabled = false;
+                    testApiBtn.disabled = false;
+                    runCommandBtn.disabled = false;
+                };
+                
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        logMessage(`Received response for: ${data.action || 'unknown action'}`);
+                        displayResponse(data);
+                        
+                        // Handle different responses
+                        if (data.action === 'login_response' && data.success) {
+                            loggedIn = true;
+                            getOrdersBtn.disabled = false;
+                            getDronesBtn.disabled = false;
+                            logMessage(`Logged in as: ${data.data.username} (${data.data.type})`, 'success');
+                        } else if (data.action === 'server_shutdown') {
+                            socket.close();
+                            logMessage('Server is shutting down', 'error');
+                        } else if (data.action === 'connection_terminated') {
+                            socket.close();
+                            logMessage('Your connection was terminated by the server', 'error');
+                        }
+                    } catch (error) {
+                        logMessage(`Error parsing message: ${error.message}`, 'error');
+                    }
+                };
+                
+                socket.onclose = () => {
+                    logMessage('Disconnected from server', 'error');
+                    updateConnectionStatus(false);
+                    resetUI();
+                };
+                
+                socket.onerror = (error) => {
+                    logMessage(`WebSocket error: ${error.message}`, 'error');
+                    updateConnectionStatus(false);
+                    resetUI();
+                };
+            } catch (error) {
+                logMessage(`Connection error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Disconnect from server
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+            }
+        });
+        
+        // Login
+        loginBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!username || !password) {
+                logMessage('Username and password required', 'error');
+                return;
+            }
+            
+            const loginData = {
+                action: 'login',
+                username: username,
+                password: password
+            };
+            
+            socket.send(JSON.stringify(loginData));
+            logMessage(`Sent login request for user: ${username}`);
+        });
+        
+        // Test API Connection
+        testApiBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            socket.send(JSON.stringify({ action: 'testApi' }));
+            logMessage('Testing API connection...');
+        });
+        
+        // Get All Orders
+        getOrdersBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            if (!loggedIn) {
+                logMessage('You must login first', 'error');
+                return;
+            }
+            
+            socket.send(JSON.stringify({ action: 'getAllOrders' }));
+            logMessage('Requested all orders');
+        });
+        
+        // Get All Drones
+        getDronesBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            if (!loggedIn) {
+                logMessage('You must login first', 'error');
+                return;
+            }
+            
+            socket.send(JSON.stringify({ action: 'getAllDrones' }));
+            logMessage('Requested all drones');
+        });
+        
+        // Run server command
+        runCommandBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            let command = commandSelect.value;
+            
+            // Add parameter for KILL command
+            if (command === 'KILL') {
+                const param = commandParam.value.trim();
+                if (!param) {
+                    logMessage('Username is required for KILL command', 'error');
+                    return;
+                }
+                command = `KILL ${param}`;
+            }
+            
+            socket.send(JSON.stringify({ 
+                action: 'runCommand',
+                command: command
+            }));
+            
+            logMessage(`Running server command: ${command}`, 'command');
+        });
+        
+        // Clear message log
+        clearLogBtn.addEventListener('click', () => {
+            messageLog.innerHTML = '';
+        });
+        
+        // Expand all JSON
+        expandAllBtn.addEventListener('click', () => {
+            const pres = messageLog.querySelectorAll('pre');
+            const toggleBtns = messageLog.querySelectorAll('button');
+            
+            pres.forEach(pre => {
+                pre.style.display = 'block';
+            });
+            
+            toggleBtns.forEach(btn => {
+                if (btn.textContent.includes('+')) {
+                    btn.textContent = '- ';
+                }
+            });
+            
+            expandedState = true;
+        });
+        
+        // Collapse all JSON
+        collapseAllBtn.addEventListener('click', () => {
+            const pres = messageLog.querySelectorAll('pre');
+            const toggleBtns = messageLog.querySelectorAll('button');
+            
+            pres.forEach(pre => {
+                pre.style.display = 'none';
+            });
+            
+            toggleBtns.forEach(btn => {
+                if (btn.textContent.includes('-')) {
+                    btn.textContent = '+ ';
+                }
+            });
+            
+            expandedState = false;
+        });
+        
+        // Reset UI to disconnected state
+        function resetUI() {
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            loginBtn.disabled = true;
+            testApiBtn.disabled = true;
+            getOrdersBtn.disabled = true;
+            getDronesBtn.disabled = true;
+            runCommandBtn.disabled = true;
+            loggedIn = false;
+            socket = null;
+        }
+        
+        // Initialize
+        updateConnectionStatus(false);
+    </script>
+</body>
+</html>
