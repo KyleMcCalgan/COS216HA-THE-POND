@@ -1,2 +1,0 @@
-root: C:\xampp\htdocs\COS216HA-THE-POND\nvm
-path: C:\nodejs
