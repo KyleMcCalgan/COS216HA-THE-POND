@@ -17,10 +17,10 @@ interface ServerResponse {
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  templateUrl: './login.html',
+  styleUrls: ['./login.css']
 })
-export class LoginComponent implements OnInit, OnDestroy {
+export class Login implements OnInit, OnDestroy {
   loginForm!: FormGroup;
   loading = false;
   submitted = false;
@@ -134,9 +134,9 @@ export class LoginComponent implements OnInit, OnDestroy {
             if (userType === 'Customer') {
               this.router.navigate(['/customer']);
             } else if (userType === 'Courier') {
-              this.router.navigate(['/courier']);
+              this.router.navigate(['/operator']);
             } else {
-              this.router.navigate(['/home']);
+              this.router.navigate(['/login']);
             }
           } else {
             this.error = response.message || 'Invalid username or password';

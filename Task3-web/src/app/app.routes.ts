@@ -9,24 +9,24 @@
 
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { OperatorComponent } from './components/operator/operator';
-import { OrderHistoryComponent } from './components/order-history/order-history';
-import { DispatchedOrdersComponent } from './components/dispatched-orders/dispatched-orders';
-import { TrackComponent } from './components/track/track';
-import { DispatchComponent } from './components/dispatch/dispatch';
-import { LoginComponent } from './components/login/login.component';
-import { CustomerComponent } from './components/customer/customer';
+import { Operator } from './components/operator/operator';
+import { OrderHistory } from './components/order-history/order-history';
+import { DispatchedOrders } from './components/dispatched-orders/dispatched-orders';
+import { Track } from './components/track/track';
+import { Dispatch } from './components/dispatch/dispatch';
+import { Login } from './components/login/login';
+import { Customer } from './components/customer/customer';
 
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
-  { path: 'customer', component: CustomerComponent },
-  { path: 'operator', component: OperatorComponent },
-  { path: 'operator/order-history', component: OrderHistoryComponent },
-  { path: 'operator/dispatched-orders', component: DispatchedOrdersComponent },
-  { path: 'operator/track/:orderId', component: TrackComponent },
-  { path: 'operator/dispatch/:orderId', component: DispatchComponent },
+  { path: 'login', component: Login },
+  { path: 'customer', component: Customer },
+  { path: 'operator', component: Operator },
+  { path: 'operator/order-history', component: OrderHistory },
+  { path: 'operator/dispatched-orders', component: DispatchedOrders },
+  { path: 'operator/track/:orderId', component: Track },
+  { path: 'operator/dispatch/:orderId', component: Dispatch },
   { path: '**', redirectTo: '/login' }
 ];
 

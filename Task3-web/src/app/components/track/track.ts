@@ -18,7 +18,7 @@ interface OrderDetails {
   templateUrl: './track.html',
   styleUrls: ['./track.css']
 })
-export class TrackComponent implements OnInit, AfterViewInit {
+export class Track implements OnInit, AfterViewInit {
   orderId: string | null = null;
   orderDetails: OrderDetails | null = null;
   private map!: L.Map;

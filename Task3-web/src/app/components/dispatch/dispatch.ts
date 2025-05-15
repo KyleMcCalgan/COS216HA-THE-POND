@@ -18,7 +18,7 @@ interface Drone {
   templateUrl: './dispatch.html',
   styleUrls: ['./dispatch.css']
 })
-export class DispatchComponent implements OnInit {
+export class Dispatch implements OnInit {
   orderId: string | null = null;
   orderDetails: { orderId: string; products: string[]; status: string } | null = null;
   availableDrones: Drone[] = [];

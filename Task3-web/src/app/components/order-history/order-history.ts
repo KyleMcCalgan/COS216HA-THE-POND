@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common'; // Import CommonModule
   templateUrl: './order-history.html',
   styleUrls: ['./order-history.css']
 })
-export class OrderHistoryComponent {
+export class OrderHistory {
   orderHistory = [
     { orderId: '', products: [], status: '', deliveryDate: '' }
   ];

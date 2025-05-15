@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common'; // Import CommonModule
   templateUrl: './dispatched-orders.html',
   styleUrls: ['./dispatched-orders.css']
 })
-export class DispatchedOrdersComponent {
+export class DispatchedOrders {
   dispatchedOrders = [
     { orderId: '', products: [], status: '' }
   ];

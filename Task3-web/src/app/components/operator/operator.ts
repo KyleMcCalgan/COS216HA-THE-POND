@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './operator.html',
   styleUrls: ['./operator.css']
 })
-export class OperatorComponent {
+export class Operator {
   outstandingOrders = [
     { orderId: '', products: [], status: '' }
   ];

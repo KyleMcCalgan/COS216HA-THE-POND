@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './customer.html',
   styleUrls: ['./customer.css']
 })
-export class CustomerComponent {
+export class Customer {
   orders = [
     { orderId: 'C001', product: 'Drone Kit', status: 'Pending' },
     { orderId: 'C002', product: 'Battery Pack', status: 'Shipped' }
