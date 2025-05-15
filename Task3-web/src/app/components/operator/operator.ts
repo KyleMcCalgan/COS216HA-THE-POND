@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { WebSocketService } from '../../services/websocket.service';
+import { ApiService } from '../../services/api.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -14,9 +15,15 @@ import { Subscription } from 'rxjs';
 export class Operator implements OnInit, OnDestroy {
   outstandingOrders: any[] = [];
   dispatchedDrones: any[] = [];
+  loading = true;
+  error = '';
   private wsSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private webSocketService: WebSocketService) {}
+  constructor(
+    private router: Router, 
+    private webSocketService: WebSocketService,
+    private apiService: ApiService
+  ) {}
 
   ngOnInit() {
     // Connect to WebSocket
@@ -27,7 +34,7 @@ export class Operator implements OnInit, OnDestroy {
       this.handleWebSocketMessage(message);
     });
 
-    // Request initial data
+    // Fetch initial data
     this.fetchOutstandingOrders();
     this.fetchDispatchedDrones();
   }
@@ -40,59 +47,143 @@ export class Operator implements OnInit, OnDestroy {
     this.webSocketService.disconnect();
   }
 
-  // Fetch outstanding orders
+  // Fetch outstanding orders using the API
   private fetchOutstandingOrders() {
-    this.webSocketService.sendMessage({
-      action: 'getOrders'
+    this.loading = true;
+    
+    // Get current user from localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    // Use API service to get all orders
+    this.apiService.callApi('getAllOrders', {
+      user_id: currentUser.id || 1,
+      user_type: currentUser.type || 'Courier'
+    }).subscribe({
+      next: (response: any) => {
+        this.loading = false;
+        console.log('API response data:', response);
+        
+        if (response.success && response.data) {
+          // Filter orders to only show those with "Storage" status
+          const storageOrders = response.data.filter((order: any) => order.state === 'Storage');
+          console.log('Filtered Storage orders:', storageOrders);
+          
+          // Process the orders for display
+          this.processOrders(storageOrders);
+        } else {
+          this.error = response.message || 'Failed to load orders';
+          console.error('Failed to load orders:', response.message);
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'Error connecting to the server';
+        console.error('Error fetching orders:', err);
+      }
     });
   }
 
-  // Fetch dispatched drones
-  private fetchDispatchedDrones() {
-    this.webSocketService.sendMessage({
-      action: 'getDrones'
-    });
-  }
+  // Process orders for display
+  private processOrders(orders: any[]) {
+    this.outstandingOrders = [];
+    
+    for (const order of orders) {
+      try {
+        // Format products list
+        let productsList: string[] = [];
+        if (order.products && Array.isArray(order.products)) {
+          productsList = order.products.map((p: any) => {
+            if (p.title) {
+              return `${p.title} (${p.quantity || 1}x)`;
+            } else if (p.name) {
+              return `${p.name} (${p.quantity || 1}x)`;
+            } else {
+              return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
+            }
+          });
+        } else {
+          productsList = ['No products'];
+        }
 
-  // Handle incoming WebSocket messages
-  private handleWebSocketMessage(message: any) {
-    switch (message.action) {
-      case 'connection_established':
-        console.log('WebSocket connection established');
-        break;
+        // Format coordinates
+        let lat = order.destination_latitude;
+        let lng = order.destination_longitude;
+        let formattedAddress = `${lat}, ${lng}`;
+        
+        try {
+          // Try to format with 4 decimal places if possible
+          if (typeof lat === 'number') lat = lat.toFixed(4);
+          if (typeof lng === 'number') lng = lng.toFixed(4);
+          formattedAddress = `${lat}, ${lng}`;
+        } catch (e) {
+          console.warn('Could not format coordinates:', e);
+        }
 
-      case 'delivering_orders_update':
-        // Update outstanding orders (filter for Pending, Processing, Out_for_delivery)
-        this.outstandingOrders = message.orders.filter((order: any) =>
-          ['Pending', 'Processing', 'Out_for_delivery'].includes(order.status)
-        ).map((order: any) => ({
+        // Create processed order object
+        const processedOrder = {
           orderId: order.order_id,
-          products: order.products || [], // Adjust based on API response
-          status: order.status,
-          deliveryAddress: order.destination?.address || 'Unknown',
-          customer: order.customer_name || 'Unknown'
-        }));
-        break;
+          products: productsList,
+          status: order.state,
+          deliveryAddress: formattedAddress,
+          customer: order.customer?.username || `Customer #${order.customer_id}`,
+          customerId: order.customer_id,
+          trackingNum: order.tracking_num
+        };
+        
+        this.outstandingOrders.push(processedOrder);
+      } catch (error) {
+        console.error('Error processing order:', error, order);
+      }
+    }
+    
+    console.log('Outstanding orders processed:', this.outstandingOrders.length);
+  }
 
+  // Fetch dispatched drones (simplified version)
+  private fetchDispatchedDrones() {
+    this.apiService.callApi('getAllDrones', {}).subscribe({
+      next: (response: any) => {
+        if (response.success && response.data) {
+          this.dispatchedDrones = response.data.map((drone: any) => ({
+            id: drone.id,
+            isAvailable: drone.is_available,
+            batteryLevel: drone.battery_level,
+            operator: drone.operator?.username || 'Unassigned'
+          }));
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching drones:', err);
+      }
+    });
+  }
+
+  // Handle WebSocket messages
+  private handleWebSocketMessage(message: any) {
+    console.log('WebSocket message received:', message.action);
+    
+    switch (message.action) {
+      case 'orders_update':
+        if (message.data) {
+          const storageOrders = message.data.filter((order: any) => order.state === 'Storage');
+          this.processOrders(storageOrders);
+        }
+        break;
+        
       case 'drone_status_update':
-        // Update dispatched drones
-        this.dispatchedDrones = message.drones.map((drone: any) => ({
-          id: drone.id,
-          isAvailable: drone.is_available,
-          batteryLevel: drone.battery_level,
-          operator: drone.operator?.username || 'Unassigned'
-        }));
+        if (message.drones) {
+          this.dispatchedDrones = message.drones.map((drone: any) => ({
+            id: drone.id,
+            isAvailable: drone.is_available,
+            batteryLevel: drone.battery_level,
+            operator: drone.operator?.username || 'Unassigned'
+          }));
+        }
         break;
-
-      case 'error':
-        console.error('WebSocket error:', message.message);
-        break;
-
-      default:
-        console.log('Unhandled WebSocket message:', message);
     }
   }
 
+  // Navigation methods
   viewOrderHistory() {
     this.router.navigate(['/operator/order-history']);
   }
@@ -105,13 +196,14 @@ export class Operator implements OnInit, OnDestroy {
     this.router.navigate(['/operator/track', orderId]);
   }
 
-  processOrder(orderId: string) {
-    // Send update to API via WebSocket
-    this.webSocketService.sendMessage({
-      action: 'updateOrder',
-      order_id: orderId,
-      state: 'Processing' // Example: Move to Processing state
-    });
+  processOrder(orderId: any) {
+    console.log(`Processing order: ${orderId}`);
     this.router.navigate(['/operator/dispatch', orderId]);
+  }
+
+  // Refresh data
+  refreshData() {
+    this.fetchOutstandingOrders();
+    this.fetchDispatchedDrones();
   }
 }

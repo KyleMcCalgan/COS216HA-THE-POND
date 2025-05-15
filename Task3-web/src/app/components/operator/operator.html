@@ -1,47 +1,70 @@
 <div class="operator-container">
   <h2>Operator Dashboard</h2>
 
+  <!-- Outstanding Orders Section -->
   <div class="section outstanding-orders">
     <h3>Outstanding Orders</h3>
-    <div class="orders-list">
-      <div *ngFor="let order of outstandingOrders" class="order-card">
+    
+    <!-- Loading indicator -->
+    <div *ngIf="loading" class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading orders...</p>
+    </div>
+    
+    <!-- Error message -->
+    <div *ngIf="error" class="error-message">
+      <p>{{ error }}</p>
+      <button (click)="refreshData()">Try Again</button>
+    </div>
+    
+    <!-- Empty state -->
+    <div *ngIf="!loading && !error && outstandingOrders.length === 0" class="empty-state">
+      <p>No outstanding orders to process at this time.</p>
+    </div>
+    
+    <!-- Orders list -->
+    <div class="orders-list" *ngIf="!loading && !error && outstandingOrders.length > 0">
+      <div class="order-card" *ngFor="let order of outstandingOrders">
         <div class="order-info">
           <p><strong>Order ID:</strong> {{ order.orderId }}</p>
           <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
-          <p><strong>Status:</strong> {{ order.status }}</p>
+          <p><strong>Status:</strong> <span class="status-badge">{{ order.status }}</span></p>
           <p><strong>Delivery Address:</strong> {{ order.deliveryAddress }}</p>
           <p><strong>Customer:</strong> {{ order.customer }}</p>
+          <p *ngIf="order.trackingNum"><strong>Tracking #:</strong> {{ order.trackingNum }}</p>
         </div>
         <div class="process-button">
-          <button (click)="processOrder(order.orderId)">Process</button>
+          <button (click)="processOrder(order.orderId.toString())" [disabled]="order.status !== 'Storage'">Process</button>
         </div>
-      </div>
-      <div *ngIf="outstandingOrders.length === 0" class="order-card">
-        <p>No outstanding orders available.</p>
       </div>
     </div>
   </div>
 
+  <!-- Dashboard Bottom Sections -->
   <div class="bottom-sections">
-    <div class="dispatched-drones-section section">
+    <!-- Dispatched Drones Section -->
+    <div class="section dispatched-drones-section">
       <h3>Dispatched Drones</h3>
-      <div *ngFor="let drone of dispatchedDrones" class="order-card">
-        <div class="order-info">
-          <p><strong>Drone ID:</strong> {{ drone.id }}</p>
-          <p><strong>Availability:</strong> {{ drone.isAvailable ? 'Available' : 'In Use' }}</p>
-          <p><strong>Battery Level:</strong> {{ drone.batteryLevel }}%</p>
-          <p><strong>Operator:</strong> {{ drone.operator }}</p>
-        </div>
+      <div *ngIf="dispatchedDrones.length === 0" class="empty-state-mini">
+        <p>No drones currently dispatched</p>
       </div>
-      <div *ngIf="dispatchedDrones.length === 0" class="order-card">
-        <p>No dispatched drones available.</p>
+      <div *ngIf="dispatchedDrones.length > 0" class="drone-count">
+        <p>{{ dispatchedDrones.length }} drone(s) in operation</p>
       </div>
-      <button (click)="viewDispatchedOrders()">View</button>
+      <button (click)="viewDispatchedOrders()">View Orders</button>
     </div>
 
-    <div class="order-history-section section">
+    <!-- Order History Section -->
+    <div class="section order-history-section">
       <h3>Order History</h3>
       <button class="order-history-btn" (click)="viewOrderHistory()">View</button>
     </div>
+  </div>
+  
+  <!-- Refresh Button -->
+  <div class="refresh-section">
+    <button class="refresh-btn" (click)="refreshData()">
+      <span class="refresh-icon">↻</span> Refresh Data
+    </button>
   </div>
 </div>

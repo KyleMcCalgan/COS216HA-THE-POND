@@ -1,11 +1,44 @@
 <div class="order-history-container">
   <h2>Order History</h2>
-  <div class="orders-list">
-    <div class="order-card" *ngFor="let order of orderHistory">
-      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
-      <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
-      <p><strong>Status:</strong> {{ order.status }}</p>
-      <p><strong>Delivery Date:</strong> {{ order.deliveryDate }}</p>
+  
+  <!-- Loading indicator -->
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading order history...</p>
+  </div>
+  
+  <!-- Error message -->
+  <div *ngIf="error" class="error-message">
+    <p>{{ error }}</p>
+    <button (click)="refreshData()">Try Again</button>
+  </div>
+  
+  <!-- Empty state -->
+  <div *ngIf="!loading && !error && orderHistory.length === 0" class="empty-state">
+    <p>No delivered orders found in the history.</p>
+    <button (click)="goBack()" class="back-btn">Back to Dashboard</button>
+  </div>
+  
+  <!-- Order history list -->
+  <div class="history-list" *ngIf="!loading && !error && orderHistory.length > 0">
+    <div class="history-card" *ngFor="let order of orderHistory">
+      <div class="order-header">
+        <h3>Order #{{ order.orderId }}</h3>
+        <span class="delivery-date">{{ order.deliveryDate }}</span>
+      </div>
+      
+      <div class="order-details">
+        <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+        <p><strong>Customer:</strong> {{ order.customer }}</p>
+        <p><strong>Tracking #:</strong> {{ order.trackingNum }}</p>
+        <p><strong>Destination:</strong> {{ order.destination }}</p>
+        <p><strong>Status:</strong> <span class="status-badge">{{ order.status }}</span></p>
+      </div>
     </div>
+  </div>
+  
+  <!-- Back button -->
+  <div class="back-button" *ngIf="!loading && !error && orderHistory.length > 0">
+    <button (click)="goBack()">Back to Dashboard</button>
   </div>
 </div>
