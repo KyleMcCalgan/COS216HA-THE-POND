@@ -1,21 +1,29 @@
 <div class="track-container">
   <h2>Track Order {{ orderId }}</h2>
+  
   <div *ngIf="orderDetails; else noOrder">
-    <p><strong>Customer:</strong> {{ orderDetails.customer }}</p>
-    <p><strong>Products:</strong> {{ orderDetails.products.join(', ') }}</p>
-    <p><strong>Destination:</strong> [{{ orderDetails.destination.latitude }}, {{ orderDetails.destination.longitude }}]</p>
-    <p><strong>Drone ID:</strong> {{ orderDetails.droneId }}</p>
+    <div class="order-details">
+      <p><strong>Customer:</strong> {{ orderDetails.customer }}</p>
+      <p><strong>Products:</strong> {{ orderDetails.products.join(', ') }}</p>
+      <p><strong>Destination:</strong> {{ orderDetails.destination.latitude.toFixed(4) }}, {{ orderDetails.destination.longitude.toFixed(4) }}</p>
+      <p><strong>Drone ID:</strong> {{ orderDetails.droneId }}</p>
+      <p><strong>Operation Center:</strong> Hatfield, Pretoria (-25.7452, 28.2324)</p>
+    </div>
+    
+    <div id="map" class="map-container"></div>
+    
+    <div class="button-group">
+      <button class="return-btn" (click)="returnToDispatched()">Return</button>
+      <button class="battery-btn" (click)="checkBattery()">Check Battery</button>
+      <button class="order-stop-btn" (click)="stopOrder()">Mark Delivered</button>
+      <button class="move-drone-btn" (click)="moveDrone()">Move Drone</button>
+    </div>
   </div>
+  
   <ng-template #noOrder>
-    <p>Order not found.</p>
+    <div class="error-message">
+      <p>Order not found or could not be loaded.</p>
+      <button class="return-btn" (click)="returnToDispatched()">Return to Dashboard</button>
+    </div>
   </ng-template>
-  <div class="map-placeholder">
-    <!-- Placeholder for Leaflet map -->
-    <p>Map will be displayed here</p>
-  </div>
-  <div class="button-group">
-    <button class="return-btn" (click)="returnToDispatched()">Return</button>
-    <button class="battery-btn" (click)="checkBattery()">Battery</button>
-    <button class="order-stop-btn" (click)="stopOrder()">Order Stop</button>
-  </div>
 </div>
