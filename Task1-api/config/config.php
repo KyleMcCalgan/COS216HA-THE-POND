@@ -6,7 +6,7 @@
  */
 
 // API settings
-$baseUrl = 'https://wheatley.cs.up.ac.za/u12345678/Task1-api'; // Replace with your student number
+$baseUrl = 'https://wheatley.cs.up.ac.za/u24648826/COS216HA-THE-POND/Task1-api/api/index.php'; // Replace with your student number
 
 // HQ coordinates (Hatfield)
 $hqLatitude = 25.7472;

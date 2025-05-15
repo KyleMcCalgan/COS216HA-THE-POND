@@ -27,8 +27,8 @@ const server = http.createServer(app);
 // Set up the WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Local API URL
-const API_URL = 'http://localhost/COS216HA-THE-POND/Task1-api/api/index.php';
+// API URL - Make sure this matches exactly with your server path structure
+const API_URL = 'https://wheatley.cs.up.ac.za/u24648826/COS216HA-THE-POND/Task1-api/api/index.php';
 
 // Store connected clients with their usernames
 const clients = new Map();
@@ -88,9 +88,26 @@ console.error = function() {
 async function callApi(type, data = {}) {
     try {
         console.log(`Calling API endpoint: ${type} with data:`, data);
+        
+        // Authentication credentials - replace with your actual username and password
+        const username = 'u24648826'; // Replace with your student username (likely u24648826)
+        const password = 'Ilovehockey!27'; // Replace with your password
+        
+        // Create authentication header (Basic Auth)
+        const auth = {
+            username: username,
+            password: password
+        };
+        
+        // Make the API request with authentication
         const response = await axios.post(API_URL, {
             type: type,
             ...data
+        }, {
+            auth: auth, // Include authentication credentials
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
         
         // Track database changes for certain operations
@@ -107,6 +124,14 @@ async function callApi(type, data = {}) {
         return response.data;
     } catch (error) {
         console.error(`API Error (${type}):`, error.message);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            return { 
+                success: false, 
+                error: error.message,
+                data: error.response.data
+            };
+        }
         return { success: false, error: error.message };
     }
 }
