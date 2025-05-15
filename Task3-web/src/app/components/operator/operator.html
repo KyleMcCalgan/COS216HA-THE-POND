@@ -1,29 +1,76 @@
 <div class="operator-container">
-      <h2>Operator Dashboard</h2>
+  <h2>Operator Dashboard</h2>
 
-      <div class="section">
-        <h3>Outstanding Orders</h3>
-        <div class="orders-list">
-          <div class="order-card" *ngFor="let order of outstandingOrders">
-            <p><strong>Order ID:</strong> {{ order.orderId }}</p>
-            <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
-            <p><strong>Status:</strong> {{ order.status }}</p>
-            <button (click)="processOrder(order.orderId)" [disabled]="order.status === 'Out_for_delivery'">Process</button>
-            <button (click)="trackOrder(order.orderId)" [disabled]="order.status !== 'Out_for_delivery'">Track</button>
-          </div>
+  <div class="section outstanding-orders">
+    <h3>Outstanding Orders</h3>
+    <div class="orders-list">
+      <!-- Mock Order 1 -->
+      <div class="order-card">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> ORD-2023-1854</p>
+          <p><strong>Products:</strong> Laptop, Wireless Mouse, Keyboard</p>
+          <p><strong>Status:</strong> Pending</p>
+          <p><strong>Delivery Address:</strong> 123 Main Street, Johannesburg</p>
+          <p><strong>Customer:</strong> John Smith</p>
+        </div>
+        <div class="process-button">
+          <button (click)="processOrder('ORD-2023-1854')">Process</button>
         </div>
       </div>
 
-      <div class="section dispatched-drones">
-        <h3>Dispatched Drones</h3>
-        <div class="drone-card" *ngFor="let drone of dispatchedDrones">
-          <p><strong>Drone ID:</strong> {{ drone.id }}</p>
-          <p><strong>Operator:</strong> {{ drone.operator }}</p>
-          <button (click)="viewDispatchedOrders()">Drone Record</button>
+      <!-- Mock Order 2 -->
+      <div class="order-card">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> ORD-2023-2105</p>
+          <p><strong>Products:</strong> Smartphone, Screen Protector, Phone Case</p>
+          <p><strong>Status:</strong> Processing</p>
+          <p><strong>Delivery Address:</strong> 45 Oak Avenue, Sandton</p>
+          <p><strong>Customer:</strong> Sarah Johnson</p>
+        </div>
+        <div class="process-button">
+          <button (click)="processOrder('ORD-2023-2105')">Process</button>
         </div>
       </div>
 
-      <div class="section">
-        <button class="order-history-btn" (click)="viewOrderHistory()">Order History</button>
+      <!-- Mock Order 3 -->
+      <div class="order-card">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> ORD-2023-3672</p>
+          <p><strong>Products:</strong> Tablet, Bluetooth Speaker</p>
+          <p><strong>Status:</strong> Out_for_delivery</p>
+          <p><strong>Delivery Address:</strong> 78 Rivonia Road, Pretoria</p>
+          <p><strong>Customer:</strong> Michael Brown</p>
+        </div>
+        <div class="process-button">
+          <button (click)="processOrder('ORD-2023-3672')" disabled>Process</button>
+        </div>
+      </div>
+
+      <!-- Mock Order 4 -->
+      <div class="order-card">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> ORD-2023-4291</p>
+          <p><strong>Products:</strong> Monitor, HDMI Cable, Webcam</p>
+          <p><strong>Status:</strong> Pending</p>
+          <p><strong>Delivery Address:</strong> 234 Grayston Drive, Rosebank</p>
+          <p><strong>Customer:</strong> Emily Wilson</p>
+        </div>
+        <div class="process-button">
+          <button (click)="processOrder('ORD-2023-4291')">Process</button>
+        </div>
       </div>
     </div>
+  </div>
+
+  <div class="bottom-sections">
+    <div class="section dispatched-drones-section">
+      <h3>Dispatched Drones</h3>
+      <button (click)="viewDispatchedOrders()">View</button>
+    </div>
+
+    <div class="section order-history-section">
+      <h3>Order History</h3>
+      <button class="order-history-btn" (click)="viewOrderHistory()">View</button>
+    </div>
+  </div>
+</div>

@@ -1,62 +1,125 @@
 .operator-container {
-  background-color: #FFF0EB; /* Background color */
+  background-color: #ffffff;
   min-height: 100vh;
   padding: 20px;
-  text-align: center;
+  font-family: Arial, sans-serif;
 }
 
 h2 {
-  color: #3E1314; /* Second color for headers */
+  color: #3E1314;
   margin-bottom: 20px;
+  text-align: center;
 }
 
 h3 {
-  color: #4D9948; /* First color for section headers */
+  color: #4D9948;
   margin-bottom: 15px;
+  text-align: center;
 }
 
 .section {
   margin-bottom: 30px;
 }
 
-.orders-list, .dispatched-drones {
+.outstanding-orders {
+  margin-bottom: 30px;
+}
+
+.orders-list {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.order-card, .drone-card {
+.order-card {
   border: 1px solid #ccc;
   border-radius: 5px;
   padding: 15px;
   background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.order-info {
   text-align: left;
-  max-width: 500px;
+  flex-grow: 1;
+}
+
+.order-card p {
+  margin: 5px 0;
+  color: #3E1314;
+}
+
+.process-button {
+  min-width: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Bottom sections with buttons */
+.bottom-sections {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
-.order-card p, .drone-card p {
-  margin: 5px 0;
-  color: #3E1314; /* Second color for text */
+.dispatched-drones-section, .order-history-section {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: white;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 button {
   padding: 8px 16px;
-  background-color: #4D9948; /* First color for buttons */
+  background-color: #4D9948;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  min-width: 100px;
 }
 
 button:hover {
-  background-color: #3E7A3A; /* Darker shade of first color */
+  background-color: #3E7A3A;
 }
 
 .order-history-btn {
-  background-color: #3E1314; /* Second color for Order History button */
+  background-color: #3E1314;
 }
 
 .order-history-btn:hover {
-  background-color: #2A0D0E; /* Darker shade of second color */
+  background-color: #2A0D0E;
+}
+
+button:disabled {
+  background-color: #cccccc;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Status styling */
+p:contains("Status: Pending") {
+  font-weight: bold;
+  color: #FFA500;
+}
+
+p:contains("Status: Processing") {
+  font-weight: bold;
+  color: #4D9948;
+}
+
+p:contains("Status: Out_for_delivery") {
+  font-weight: bold;
+  color: #3E1314;
 }
