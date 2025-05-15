@@ -3,20 +3,6 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 
-// Define interface for our order data structure
-interface Order {
-  id: number;
-  customer_id: number;
-  tracking_num: string;
-  state: string;
-  products: any[];
-  destination_latitude: number;
-  destination_longitude: number;
-  drone_id?: number;
-  created_at: string;
-  customer_name?: string;
-}
-
 @Component({
   selector: 'app-dispatched-orders',
   standalone: true,
@@ -25,62 +11,143 @@ interface Order {
   styleUrls: ['./dispatched-orders.css']
 })
 export class DispatchedOrders implements OnInit {
-  dispatchedOrders: Order[] = [];
+  dispatchedOrders: any[] = [];
   loading = true;
   error = '';
 
-  constructor(private router: Router, private apiService: ApiService) {}
+  constructor(
+    private router: Router,
+    private apiService: ApiService
+  ) {}
 
-  ngOnInit(): void {
-    this.fetchOrders();
+  ngOnInit() {
+    this.fetchDispatchedOrders();
   }
 
-  fetchOrders(): void {
-    // Get current user from localStorage (or you could use AuthService)
+  // Fetch orders with 'Out_for_delivery' status
+  private fetchDispatchedOrders() {
+    this.loading = true;
+    
+    // Get current user from localStorage
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     
-    // Make API call to get all orders
-    this.apiService.callApi<Order[]>('getAllOrders', {
-      user_id: currentUser.id || 1, // Use the logged-in user's ID if available, or default to 1
-      user_type: currentUser.type || 'Courier' // Use the logged-in user's type, or default to Courier
+    // Use API service to get all orders
+    this.apiService.callApi('getAllOrders', {
+      user_id: currentUser.id || 1,
+      user_type: currentUser.type || 'Courier'
     }).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         this.loading = false;
+        console.log('API response data:', response);
+        
         if (response.success && response.data) {
-          // Filter orders to only show those with Out_for_delivery status
-          this.dispatchedOrders = response.data.filter(order => order.state === 'Out_for_delivery');
+          // Filter orders to only show those with "Out_for_delivery" status
+          const outForDeliveryOrders = response.data.filter((order: any) => 
+            order.state === 'Out_for_delivery'
+          );
+          console.log('Filtered Out_for_delivery orders:', outForDeliveryOrders);
           
-          // If no dispatched orders, set empty array
-          if (this.dispatchedOrders.length === 0) {
-            console.log('No orders currently being delivered');
-          }
+          // Process the orders for display
+          this.processOrders(outForDeliveryOrders);
         } else {
-          this.error = response.message || 'Failed to load orders';
-          console.error('Failed to load orders:', response.message);
+          this.error = response.message || 'Failed to load dispatched orders';
+          console.error('Failed to load dispatched orders:', response.message);
         }
       },
       error: (err) => {
         this.loading = false;
         this.error = 'Error connecting to the server';
-        console.error('Error fetching orders:', err);
+        console.error('Error fetching dispatched orders:', err);
       }
     });
   }
 
-  trackOrder(orderId: number): void {
+  // Process orders for display
+  private processOrders(orders: any[]) {
+    this.dispatchedOrders = [];
+    
+    for (const order of orders) {
+      try {
+        console.log('Processing order:', order);
+        
+        // Format products list
+        let productsList: string[] = [];
+        if (order.products && Array.isArray(order.products)) {
+          productsList = order.products.map((p: any) => {
+            if (p.title) {
+              return `${p.title} (${p.quantity || 1}x)`;
+            } else if (p.name) {
+              return `${p.name} (${p.quantity || 1}x)`;
+            } else {
+              return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
+            }
+          });
+        } else {
+          productsList = ['No products'];
+        }
+
+        // Format coordinates
+        let lat = order.destination_latitude;
+        let lng = order.destination_longitude;
+        let formattedAddress = `${lat}, ${lng}`;
+        
+        try {
+          // Try to format with 4 decimal places if possible
+          if (typeof lat === 'number') lat = lat.toFixed(4);
+          if (typeof lng === 'number') lng = lng.toFixed(4);
+          formattedAddress = `${lat}, ${lng}`;
+        } catch (e) {
+          console.warn('Could not format coordinates:', e);
+        }
+
+        // Get drone information if available
+        const droneId = order.drone_id || 'Unknown';
+
+        // Create processed order object
+        const processedOrder = {
+          orderId: order.order_id,
+          orderIdStr: String(order.order_id), // Ensure we have a string version for routing
+          products: productsList,
+          status: order.state,
+          destination: formattedAddress,
+          customer: order.customer?.username || `Customer #${order.customer_id}`,
+          customerId: order.customer_id,
+          trackingNum: order.tracking_num,
+          droneId: droneId
+        };
+        
+        console.log('Processed order:', processedOrder);
+        this.dispatchedOrders.push(processedOrder);
+      } catch (error) {
+        console.error('Error processing order:', error, order);
+      }
+    }
+    
+    console.log('Dispatched orders processed:', this.dispatchedOrders.length);
+  }
+
+  // Navigate to track page for specific order
+  trackOrder(orderId: string) {
+    console.log('Tracking order:', orderId);
+    if (!orderId) {
+      console.error('Cannot track order: No order ID provided');
+      return;
+    }
     this.router.navigate(['/operator/track', orderId]);
   }
 
-  // Helper method to get product names from products array
-  getProductNames(products: any[]): string {
-    if (!products || products.length === 0) {
-      return 'No products';
-    }
-    return products.map(p => p.name || `Product #${p.id}`).join(', ');
-  }
-  
   // Go back to operator dashboard
-  goBack(): void {
+  goBack() {
     this.router.navigate(['/operator']);
+  }
+
+  // Refresh data
+  refreshData() {
+    this.fetchDispatchedOrders();
+  }
+
+  // Get product names as a string for display
+  getProductNames(products: string[]): string {
+    return products.join(', ');
   }
 }

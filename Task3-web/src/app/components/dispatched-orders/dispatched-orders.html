@@ -1,43 +1,57 @@
 <div class="dispatched-orders-container">
   <h2>Dispatched Orders</h2>
   
-  <!-- Show loading indicator -->
+  <!-- Loading indicator -->
   <div *ngIf="loading" class="loading-spinner">
     <div class="spinner"></div>
     <p>Loading orders...</p>
   </div>
   
-  <!-- Show error message if failed to load -->
+  <!-- Error message -->
   <div *ngIf="error" class="error-message">
     <p>{{ error }}</p>
-    <button (click)="fetchOrders()">Try Again</button>
+    <button (click)="refreshData()">Try Again</button>
   </div>
   
-  <!-- Show orders or empty state -->
-  <div *ngIf="!loading && !error" class="orders-list">
-    <!-- Empty state -->
-    <div *ngIf="dispatchedOrders.length === 0" class="empty-state">
-      <p>No orders are currently being delivered.</p>
-    </div>
-    
-    <!-- Order cards -->
+  <!-- Empty state -->
+  <div *ngIf="!loading && !error && dispatchedOrders.length === 0" class="empty-state">
+    <p>No orders are currently being delivered.</p>
+    <p class="info-text">Orders will appear here when they have status "Out_for_delivery".</p>
+    <button (click)="goBack()" class="back-btn">Back to Dashboard</button>
+  </div>
+  
+  <!-- Order list -->
+  <div class="orders-list" *ngIf="!loading && !error && dispatchedOrders.length > 0">
     <div class="order-card" *ngFor="let order of dispatchedOrders">
-      <p><strong>Order ID:</strong> {{ order.id }}</p>
-      <p><strong>Tracking #:</strong> {{ order.tracking_num }}</p>
-      <p><strong>Customer ID:</strong> {{ order.customer_id }}</p>
-      <p *ngIf="order.customer_name"><strong>Customer:</strong> {{ order.customer_name }}</p>
-      <p><strong>Products:</strong> {{ getProductNames(order.products) }}</p>
-      <p><strong>Status:</strong> {{ order.state }}</p>
-      <p><strong>Destination:</strong> {{ order.destination_latitude.toFixed(4) }}, {{ order.destination_longitude.toFixed(4) }}</p>
-      <p *ngIf="order.drone_id"><strong>Drone ID:</strong> {{ order.drone_id }}</p>
+      <div class="order-header">
+        <h3>Order #{{ order.orderId }}</h3>
+        <span class="status-badge">{{ order.status }}</span>
+      </div>
+      
+      <div class="order-details">
+        <p><strong>Tracking #:</strong> {{ order.trackingNum }}</p>
+        <p><strong>Customer:</strong> {{ order.customer }}</p>
+        <p><strong>Products:</strong> {{ getProductNames(order.products) }}</p>
+        <p><strong>Destination:</strong> {{ order.destination }}</p>
+        <p *ngIf="order.droneId && order.droneId !== 'Unknown'"><strong>Drone ID:</strong> {{ order.droneId }}</p>
+      </div>
+      
       <div class="order-actions">
-        <button (click)="trackOrder(order.id)" class="track-btn">Track Delivery</button>
+        <button (click)="trackOrder(order.orderIdStr)" class="track-btn">Track Delivery</button>
       </div>
     </div>
   </div>
   
   <!-- Back button -->
-  <div class="back-button">
+  <div class="back-button" *ngIf="!loading && !error && dispatchedOrders.length > 0">
     <button (click)="goBack()">Back to Dashboard</button>
   </div>
+  
+  <!-- Debugging info (uncomment for debugging) -->
+  <!--
+  <div class="debug-section" *ngIf="dispatchedOrders.length > 0">
+    <h4>Debug Information:</h4>
+    <pre>{{ dispatchedOrders | json }}</pre>
+  </div>
+  -->
 </div>
