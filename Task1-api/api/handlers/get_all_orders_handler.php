@@ -54,7 +54,7 @@ function handleGetAllOrders($data) {
         // Build the SQL query based on user type
         if ($userType === 'Courier') {
             // Couriers can see all orders in "Storage" state
-            $sql = "SELECT * FROM Orders WHERE state = 'Storage'";
+            $sql = "SELECT * FROM Orders";
             $stmt = $conn->prepare($sql);
         } else if ($userType === 'Customer') {
             // Customers can only see their own orders
