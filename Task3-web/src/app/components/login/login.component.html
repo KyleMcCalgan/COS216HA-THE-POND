@@ -43,6 +43,20 @@
         
         <div *ngIf="error" class="alert alert-danger mt-3">{{ error }}</div>
       </form>
+
+      <!-- New Server Response Section -->
+      <div class="server-response-section mt-4">
+        <h3>Server Responses</h3>
+        <div class="response-container">
+          <div *ngFor="let response of serverResponses" class="response-item" [ngClass]="response.type">
+            <span class="timestamp">{{ response.timestamp | date:'medium' }}</span>
+            <strong>{{ response.title }}:</strong> {{ response.message }}
+          </div>
+          <div *ngIf="serverResponses.length === 0" class="no-responses">
+            No responses yet. Please connect to WebSocket and login.
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
