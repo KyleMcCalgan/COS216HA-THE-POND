@@ -4,71 +4,42 @@
   <div class="section outstanding-orders">
     <h3>Outstanding Orders</h3>
     <div class="orders-list">
-      <!-- Mock Order 1 -->
-      <div class="order-card">
+      <div *ngFor="let order of outstandingOrders" class="order-card">
         <div class="order-info">
-          <p><strong>Order ID:</strong> ORD-2023-1854</p>
-          <p><strong>Products:</strong> Laptop, Wireless Mouse, Keyboard</p>
-          <p><strong>Status:</strong> Pending</p>
-          <p><strong>Delivery Address:</strong> 123 Main Street, Johannesburg</p>
-          <p><strong>Customer:</strong> John Smith</p>
+          <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+          <p><strong>Products:</strong> {{ order.products.join(', ') }}</p>
+          <p><strong>Status:</strong> {{ order.status }}</p>
+          <p><strong>Delivery Address:</strong> {{ order.deliveryAddress }}</p>
+          <p><strong>Customer:</strong> {{ order.customer }}</p>
         </div>
         <div class="process-button">
-          <button (click)="processOrder('ORD-2023-1854')">Process</button>
+          <button (click)="processOrder(order.orderId)">Process</button>
         </div>
       </div>
-
-      <!-- Mock Order 2 -->
-      <div class="order-card">
-        <div class="order-info">
-          <p><strong>Order ID:</strong> ORD-2023-2105</p>
-          <p><strong>Products:</strong> Smartphone, Screen Protector, Phone Case</p>
-          <p><strong>Status:</strong> Processing</p>
-          <p><strong>Delivery Address:</strong> 45 Oak Avenue, Sandton</p>
-          <p><strong>Customer:</strong> Sarah Johnson</p>
-        </div>
-        <div class="process-button">
-          <button (click)="processOrder('ORD-2023-2105')">Process</button>
-        </div>
-      </div>
-
-      <!-- Mock Order 3 -->
-      <div class="order-card">
-        <div class="order-info">
-          <p><strong>Order ID:</strong> ORD-2023-3672</p>
-          <p><strong>Products:</strong> Tablet, Bluetooth Speaker</p>
-          <p><strong>Status:</strong> Out_for_delivery</p>
-          <p><strong>Delivery Address:</strong> 78 Rivonia Road, Pretoria</p>
-          <p><strong>Customer:</strong> Michael Brown</p>
-        </div>
-        <div class="process-button">
-          <button (click)="processOrder('ORD-2023-3672')" disabled>Process</button>
-        </div>
-      </div>
-
-      <!-- Mock Order 4 -->
-      <div class="order-card">
-        <div class="order-info">
-          <p><strong>Order ID:</strong> ORD-2023-4291</p>
-          <p><strong>Products:</strong> Monitor, HDMI Cable, Webcam</p>
-          <p><strong>Status:</strong> Pending</p>
-          <p><strong>Delivery Address:</strong> 234 Grayston Drive, Rosebank</p>
-          <p><strong>Customer:</strong> Emily Wilson</p>
-        </div>
-        <div class="process-button">
-          <button (click)="processOrder('ORD-2023-4291')">Process</button>
-        </div>
+      <div *ngIf="outstandingOrders.length === 0" class="order-card">
+        <p>No outstanding orders available.</p>
       </div>
     </div>
   </div>
 
   <div class="bottom-sections">
-    <div class="section dispatched-drones-section">
+    <div class="dispatched-drones-section section">
       <h3>Dispatched Drones</h3>
+      <div *ngFor="let drone of dispatchedDrones" class="order-card">
+        <div class="order-info">
+          <p><strong>Drone ID:</strong> {{ drone.id }}</p>
+          <p><strong>Availability:</strong> {{ drone.isAvailable ? 'Available' : 'In Use' }}</p>
+          <p><strong>Battery Level:</strong> {{ drone.batteryLevel }}%</p>
+          <p><strong>Operator:</strong> {{ drone.operator }}</p>
+        </div>
+      </div>
+      <div *ngIf="dispatchedDrones.length === 0" class="order-card">
+        <p>No dispatched drones available.</p>
+      </div>
       <button (click)="viewDispatchedOrders()">View</button>
     </div>
 
-    <div class="section order-history-section">
+    <div class="order-history-section section">
       <h3>Order History</h3>
       <button class="order-history-btn" (click)="viewOrderHistory()">View</button>
     </div>
