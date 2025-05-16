@@ -1,28 +1,90 @@
 <div class="dispatch-container">
-      <h2>Dispatch Order {{ orderId }}</h2>
-      
-      <div *ngIf="orderDetails; else noOrder">
+  <!-- Top navigation -->
+  <div class="top-navigation">
+    <button (click)="cancel()" class="back-btn">
+      <i class="back-icon">←</i> Back to Dashboard
+    </button>
+    <h2>Dispatch Order {{ orderId }}</h2>
+  </div>
+  
+  <!-- Loading indicator -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="loader"></div>
+    <p>Loading order information...</p>
+  </div>
+  
+  <!-- Order details when loaded -->
+  <div *ngIf="!isLoading && orderDetails && !error">
+    <!-- Order details card -->
+    <div class="order-card">
+      <h3>Order Information</h3>
+      <div class="order-details">
         <p><strong>Order ID:</strong> {{ orderDetails.orderId }}</p>
         <p><strong>Products:</strong> {{ orderDetails.products.join(', ') }}</p>
-        <p><strong>Status:</strong> {{ orderDetails.status }}</p>
+        <p><strong>Status:</strong> <span class="status-badge">{{ orderDetails.status }}</span></p>
+        <p><strong>Customer:</strong> {{ orderDetails.customer }}</p>
+        <p><strong>Destination:</strong> {{ orderDetails.destination.latitude.toFixed(4) }}, {{ orderDetails.destination.longitude.toFixed(4) }}</p>
+        <p><strong>Tracking #:</strong> {{ orderDetails.trackingNum }}</p>
+      </div>
+    </div>
 
-        <div class="drone-selection">
-          <h3>Select a Drone</h3>
-          <select [(ngModel)]="selectedDroneId">
-            <option [value]="null" disabled>Select a drone</option>
-            <option *ngFor="let drone of availableDrones" [value]="drone.id" [disabled]="!drone.isAvailable">
-              Drone {{ drone.id }} (Battery: {{ drone.batteryLevel }}%, Operator: {{ drone.operator }}) {{ drone.isAvailable ? '' : ' - Unavailable' }}
-            </option>
-          </select>
-        </div>
-
-        <div class="button-group">
-          <button (click)="dispatchOrder()" [disabled]="!selectedDroneId">Dispatch</button>
-          <button (click)="cancel()">Cancel</button>
+    <!-- Drone selection section -->
+    <div class="drone-selection-section">
+      <h3>Select Available Drone</h3>
+      
+      <!-- Empty state for no available drones -->
+      <div *ngIf="availableDrones.length === 0" class="empty-state">
+        <p>No available drones found.</p>
+        <p class="info-text">Drones must be available and have no assigned order to be selected.</p>
+      </div>
+      
+      <!-- Drone selection cards -->
+      <div class="drone-cards" *ngIf="availableDrones.length > 0">
+        <div 
+          *ngFor="let drone of availableDrones" 
+          class="drone-card"
+          [class.selected]="selectedDroneId === drone.id"
+          (click)="selectDrone(drone.id)">
+          
+          <div class="drone-header">
+            <h4>Drone #{{ drone.id }}</h4>
+            <span class="battery-indicator">
+              <span class="battery-level" [style.width.%]="drone.batteryLevel"></span>
+              {{ drone.batteryLevel }}%
+            </span>
+          </div>
+          
+          <div class="drone-details">
+            <p><strong>Status:</strong> Available</p>
+            <p><strong>Location:</strong> At HQ</p>
+            <p *ngIf="drone.operator && drone.operator !== 'Unassigned'"><strong>Operator:</strong> {{ drone.operator }}</p>
+          </div>
+          
+          <div class="select-indicator" *ngIf="selectedDroneId === drone.id">
+            <span class="checkmark">✓</span>
+          </div>
         </div>
       </div>
-
-      <ng-template #noOrder>
-        <p>Order not found.</p>
-      </ng-template>
     </div>
+
+    <!-- Action buttons -->
+    <div class="button-group">
+      <button 
+        class="dispatch-btn" 
+        [disabled]="!selectedDroneId || isProcessing" 
+        (click)="dispatchOrder()">
+        <span *ngIf="isProcessing" class="spinner"></span>
+        <span *ngIf="!isProcessing">Dispatch Order</span>
+      </button>
+      <button class="cancel-btn" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+  
+  <!-- Error message display -->
+  <div *ngIf="!isLoading && error" class="error-container">
+    <h3>Error</h3>
+    <p>{{ error }}</p>
+    <p class="info-text">Please try again or return to the dashboard.</p>
+    <button (click)="cancel()">Return to Dashboard</button>
+  </div>
+</div>

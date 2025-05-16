@@ -42,16 +42,30 @@
 
   <!-- Dashboard Bottom Sections -->
   <div class="bottom-sections">
-    <!-- Dispatched Drones Section -->
-    <div class="section dispatched-drones-section">
-      <h3>Dispatched Drones</h3>
-      <div *ngIf="dispatchedDrones.length === 0" class="empty-state-mini">
-        <p>No drones currently dispatched</p>
+    <!-- Operate Drones Section (Updated from "Dispatched Drones") -->
+    <div class="section operate-drones-section">
+      <h3>Operate Drones</h3>
+      
+      <div *ngIf="dronesCurrentlyDelivering.length === 0 && dronesWaitingToDeliver.length === 0" class="empty-state-mini">
+        <p>No drones currently in operation</p>
       </div>
-      <div *ngIf="dispatchedDrones.length > 0" class="drone-count">
-        <p>{{ dispatchedDrones.length }} drone(s) in operation</p>
+      
+      <div *ngIf="dronesCurrentlyDelivering.length > 0 || dronesWaitingToDeliver.length > 0" class="drone-counts">
+        <div class="drone-count-item drone-count-delivering">
+          <span>Currently Delivering:</span>
+          <span>{{ dronesCurrentlyDelivering.length }}</span>
+        </div>
+        <div class="drone-count-item drone-count-waiting">
+          <span>Waiting to Deliver:</span>
+          <span>{{ dronesWaitingToDeliver.length }}</span>
+        </div>
+        <div class="drone-count-item drone-count-total">
+          <span>Total Active Drones:</span>
+          <span>{{ dronesCurrentlyDelivering.length + dronesWaitingToDeliver.length }}</span>
+        </div>
       </div>
-      <button (click)="viewDispatchedOrders()">View Orders</button>
+      
+      <button (click)="viewDispatchedOrders()">Manage Orders</button>
     </div>
 
     <!-- Order History Section -->

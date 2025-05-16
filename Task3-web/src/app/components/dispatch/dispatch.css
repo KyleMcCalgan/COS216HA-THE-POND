@@ -1,70 +1,341 @@
-/* src/app/components/dispatch/dispatch.css */
 .dispatch-container {
-  max-width: 600px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
+  background-color: #FFF0EB;
+  min-height: 100vh;
 }
 
-h2 {
-  text-align: center;
-  color: #333;
-}
-
-h3 {
-  margin-top: 20px;
-  color: #555;
-}
-
-p {
-  margin: 5px 0;
-}
-
-.drone-selection {
-  margin: 20px 0;
-}
-
-select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.button-group {
+/* Top navigation styling */
+.top-navigation {
   display: flex;
-  gap: 10px;
+  align-items: center;
   justify-content: center;
-  margin-top: 20px;
+  position: relative;
+  margin-bottom: 30px;
 }
 
-button {
-  padding: 10px 20px;
+.back-btn {
+  position: absolute;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #6c757d;
+  color: white;
+  padding: 8px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.back-icon {
   font-size: 16px;
 }
 
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+h2 {
+  color: #3E1314;
+  margin: 0 auto;
+  font-size: 28px;
 }
 
-button:not(:disabled) {
-  background-color: #007bff;
+h3 {
+  color: #4D9948;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  font-size: 22px;
+}
+
+/* Loading container styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 100px auto;
+  text-align: center;
+}
+
+.loader {
+  border: 5px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 5px solid #3E1314;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Order card styling */
+.order-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.order-details p {
+  margin: 10px 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.order-details strong {
+  font-weight: 600;
+  color: #3E1314;
+  min-width: 120px;
+  display: inline-block;
+}
+
+.status-badge {
+  display: inline-block;
+  background-color: #FFE0B2;
+  color: #E65100;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* Drone selection section */
+.drone-selection-section {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.empty-state p {
+  margin: 10px 0;
+  color: #555;
+}
+
+.info-text {
+  color: #888;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Drone cards styling */
+.drone-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.drone-card {
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.drone-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.drone-card.selected {
+  border-color: #4D9948;
+  background-color: #f0f7f0;
+}
+
+.drone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.drone-header h4 {
+  margin: 0;
+  color: #3E1314;
+  font-size: 18px;
+}
+
+.battery-indicator {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: #555;
+  position: relative;
+  padding-left: 25px;
+}
+
+.battery-level {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #4D9948;
+  height: 10px;
+  max-width: 20px;
+  border-radius: 2px;
+}
+
+.drone-details p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.drone-details strong {
+  font-weight: 600;
+  display: inline-block;
+  min-width: 80px;
+}
+
+.select-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  background-color: #4D9948;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkmark {
+  color: white;
+  font-size: 12px;
+}
+
+/* Button group styling */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 30px 0;
+}
+
+button {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 16px;
+}
+
+.dispatch-btn {
+  background-color: #4D9948;
+  color: white;
+  min-width: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dispatch-btn:hover:not(:disabled) {
+  background-color: #3E7A3A;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dispatch-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
   color: white;
 }
 
-button:not(:disabled):hover {
-  background-color: #0056b3;
-}
-
-button:nth-child(2) {
-  background-color: #6c757d;
-}
-
-button:nth-child(2):hover {
+.cancel-btn:hover {
   background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Error container styling */
+.error-container {
+  background-color: #fff0f0;
+  border-radius: 10px;
+  padding: 30px;
+  margin: 50px auto;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.error-container h3 {
+  color: #dc3545;
+  margin-top: 0;
+}
+
+.error-container p {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .top-navigation {
+    flex-direction: column;
+    margin-bottom: 40px;
+  }
+  
+  .back-btn {
+    position: static;
+    margin-bottom: 15px;
+  }
+  
+  .drone-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .dispatch-btn, .cancel-btn {
+    width: 100%;
+  }
 }

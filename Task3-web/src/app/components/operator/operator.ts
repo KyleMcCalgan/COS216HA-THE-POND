@@ -5,6 +5,18 @@ import { WebSocketService } from '../../services/websocket.service';
 import { ApiService } from '../../services/api.service';
 import { Subscription } from 'rxjs';
 
+interface Drone {
+  id: number;
+  isAvailable: boolean;
+  batteryLevel: number;
+  operator: string;
+  order_id?: number;
+  Order_ID?: number;
+  altitude: number;
+  latest_latitude: number;
+  latest_longitude: number;
+}
+
 @Component({
   selector: 'app-operator',
   standalone: true,
@@ -14,7 +26,9 @@ import { Subscription } from 'rxjs';
 })
 export class Operator implements OnInit, OnDestroy {
   outstandingOrders: any[] = [];
-  dispatchedDrones: any[] = [];
+  allDrones: Drone[] = [];
+  dronesCurrentlyDelivering: Drone[] = [];
+  dronesWaitingToDeliver: Drone[] = [];
   loading = true;
   error = '';
   private wsSubscription: Subscription | null = null;
@@ -36,7 +50,7 @@ export class Operator implements OnInit, OnDestroy {
 
     // Fetch initial data
     this.fetchOutstandingOrders();
-    this.fetchDispatchedDrones();
+    this.fetchDrones();
   }
 
   ngOnDestroy() {
@@ -139,23 +153,58 @@ export class Operator implements OnInit, OnDestroy {
     console.log('Outstanding orders processed:', this.outstandingOrders.length);
   }
 
-  // Fetch dispatched drones (simplified version)
-  private fetchDispatchedDrones() {
+  // Fetch all drones and categorize them
+  private fetchDrones() {
     this.apiService.callApi('getAllDrones', {}).subscribe({
       next: (response: any) => {
         if (response.success && response.data) {
-          this.dispatchedDrones = response.data.map((drone: any) => ({
+          this.allDrones = response.data.map((drone: any) => ({
             id: drone.id,
             isAvailable: drone.is_available,
             batteryLevel: drone.battery_level,
-            operator: drone.operator?.username || 'Unassigned'
+            operator: drone.operator?.username || 'Unassigned',
+            order_id: drone.order_id,
+            Order_ID: drone.Order_ID, // Some systems might use capitalized field name
+            altitude: parseFloat(drone.altitude) || 0,
+            latest_latitude: parseFloat(drone.latest_latitude) || 0,
+            latest_longitude: parseFloat(drone.latest_longitude) || 0
           }));
+          
+          // Categorize drones based on status
+          this.categorizeDrones();
+        } else {
+          console.error('Failed to fetch drones:', response.message);
         }
       },
       error: (err) => {
         console.error('Error fetching drones:', err);
       }
     });
+  }
+  
+  // Categorize drones based on the business rules defined in server.js
+  private categorizeDrones() {
+    // Reset arrays
+    this.dronesCurrentlyDelivering = [];
+    this.dronesWaitingToDeliver = [];
+    
+    // For each drone, categorize based on business rules
+    this.allDrones.forEach(drone => {
+      // Handle field capitalization differences (order_id vs Order_ID)
+      const orderID = drone.order_id || drone.Order_ID;
+      
+      // CURRENTLY_DELIVERING: is_available = false and order_id is not null
+      if (!drone.isAvailable && orderID) {
+        this.dronesCurrentlyDelivering.push(drone);
+      }
+      // WAITING_TO_DELIVER: is_available = true and order_id is not null
+      else if (drone.isAvailable && orderID) {
+        this.dronesWaitingToDeliver.push(drone);
+      }
+    });
+    
+    console.log('Drones currently delivering:', this.dronesCurrentlyDelivering.length);
+    console.log('Drones waiting to deliver:', this.dronesWaitingToDeliver.length);
   }
 
   // Handle WebSocket messages
@@ -172,12 +221,19 @@ export class Operator implements OnInit, OnDestroy {
         
       case 'drone_status_update':
         if (message.drones) {
-          this.dispatchedDrones = message.drones.map((drone: any) => ({
+          this.allDrones = message.drones.map((drone: any) => ({
             id: drone.id,
             isAvailable: drone.is_available,
             batteryLevel: drone.battery_level,
-            operator: drone.operator?.username || 'Unassigned'
+            operator: drone.operator?.username || 'Unassigned',
+            order_id: drone.order_id,
+            Order_ID: drone.Order_ID,
+            altitude: parseFloat(drone.altitude) || 0,
+            latest_latitude: parseFloat(drone.latest_latitude) || 0,
+            latest_longitude: parseFloat(drone.latest_longitude) || 0
           }));
+          
+          this.categorizeDrones();
         }
         break;
     }
@@ -192,10 +248,6 @@ export class Operator implements OnInit, OnDestroy {
     this.router.navigate(['/operator/dispatched-orders']);
   }
 
-  trackOrder(orderId: string) {
-    this.router.navigate(['/operator/track', orderId]);
-  }
-
   processOrder(orderId: any) {
     console.log(`Processing order: ${orderId}`);
     this.router.navigate(['/operator/dispatch', orderId]);
@@ -204,6 +256,6 @@ export class Operator implements OnInit, OnDestroy {
   // Refresh data
   refreshData() {
     this.fetchOutstandingOrders();
-    this.fetchDispatchedDrones();
+    this.fetchDrones();
   }
 }
