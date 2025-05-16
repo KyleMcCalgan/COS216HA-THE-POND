@@ -269,3 +269,128 @@ h2 {
     gap: 0.25rem;
   }
 }
+
+/* Add these styles to your existing track.css file */
+
+/* State bar styles */
+.state-bar {
+  width: 100%;
+  padding: 0.75rem 2rem;
+  color: white;
+  position: relative;
+  z-index: 10;
+}
+
+.state-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.state-label {
+  font-weight: bold;
+  font-size: 1rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+}
+
+.state-message {
+  font-size: 0.9rem;
+}
+
+/* State colors */
+.state-delivering {
+  background-color: #2196F3;
+}
+
+.state-returning {
+  background-color: #FF9800;
+}
+
+.state-delivered {
+  background-color: #4CAF50;
+}
+
+.state-completed {
+  background-color: #3E1314;
+}
+
+/* Drone status card */
+.drone-status-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.drone-status-card h3 {
+  color: #3E1314;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1.2rem;
+}
+
+.state-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.state-badge.state-delivering {
+  background-color: #2196F3;
+}
+
+.state-badge.state-returning {
+  background-color: #FF9800;
+}
+
+.state-badge.state-delivered {
+  background-color: #4CAF50;
+}
+
+.state-badge.state-completed {
+  background-color: #3E1314;
+}
+
+/* Battery indicator */
+.battery-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.battery-level {
+  height: 0.75rem;
+  background-color: #4CAF50;
+  border-radius: 0.25rem;
+  max-width: 100px;
+}
+
+/* Responsive adjustments for the new elements */
+@media (max-width: 768px) {
+  .state-bar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .state-bar-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .drone-status-card {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+}
