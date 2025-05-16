@@ -4,14 +4,6 @@
     <h2>Track Order {{ orderId }}</h2>
   </div>
   
-  <!-- Drone state notification bar -->
-  <div *ngIf="showStateMessage" class="state-bar" [ngClass]="getDroneStateClass()">
-    <div class="state-bar-content">
-      <span class="state-label">{{ getDroneStateText() }}</span>
-      <span class="state-message">{{ stateMessage }}</span>
-    </div>
-  </div>
-  
   <!-- Main content section -->
   <div *ngIf="orderDetails; else noOrder" class="track-content">
     <div class="content-grid">
@@ -42,31 +34,6 @@
             </div>
           </div>
         </div>
-        
-        <!-- Drone Status Card (New) -->
-        <div class="drone-status-card">
-          <h3>Drone Status</h3>
-          <div class="info-list">
-            <div class="info-item">
-              <span class="info-label">Current State:</span>
-              <span class="info-value state-badge" [ngClass]="getDroneStateClass()">{{ getDroneStateText() }}</span>
-            </div>
-            <div *ngIf="droneDetails" class="info-item">
-              <span class="info-label">Battery:</span>
-              <span class="info-value">
-                <div class="battery-indicator">
-                  <div class="battery-level" [style.width.%]="droneDetails.battery_level"></div>
-                  {{ droneDetails.battery_level }}%
-                </div>
-              </span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Controls:</span>
-              <span class="info-value">Use W, A, S, D keys to move the drone</span>
-            </div>
-          </div>
-        </div>
-        
         <div class="navigation-actions">
           <button (click)="returnToDispatched()" class="return-btn">Return to Drone Orders</button>
         </div>
