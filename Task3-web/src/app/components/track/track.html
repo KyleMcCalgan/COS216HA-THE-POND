@@ -1,30 +1,72 @@
 <div class="track-container">
-  <h2>Track Order {{ orderId }}</h2>
+  <!-- Header with back button -->
+  <div class="track-header">
+    <h2>Track Order {{ orderId }}</h2>
+  </div>
   
-  <div *ngIf="orderDetails; else noOrder">
-    <div class="main-content">
-      <div class="left-section">
-        <div class="order-details">
-          <p><strong>Customer:</strong> {{ orderDetails.customer }}</p>
-          <p><strong>Products:</strong> {{ orderDetails.products.join(', ') }}</p>
-          <p><strong>Destination:</strong> {{ orderDetails.destination.latitude.toFixed(4) }}, {{ orderDetails.destination.longitude.toFixed(4) }}</p>
-          <p><strong>Drone ID:</strong> {{ orderDetails.droneId }}</p>
-          <p><strong>Operation Center:</strong> Hatfield, Pretoria (-25.7452, 28.2324)</p>
+  <!-- Main content section -->
+  <div *ngIf="orderDetails; else noOrder" class="track-content">
+    <div class="content-grid">
+      <!-- Left panel with order details -->
+      <div class="details-panel">
+        <div class="order-info-card">
+          <h3>Order Information</h3>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Customer:</span>
+              <span class="info-value">{{ orderDetails.customer }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Products:</span>
+              <span class="info-value">{{ orderDetails.products.join(', ') }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Destination:</span>
+              <span class="info-value">{{ orderDetails.destination.latitude.toFixed(4) }}, {{ orderDetails.destination.longitude.toFixed(4) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Drone ID:</span>
+              <span class="info-value">{{ orderDetails.droneId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Operation Center:</span>
+              <span class="info-value">Hatfield, Pretoria</span>
+            </div>
+          </div>
         </div>
-        <div class="button-group">
-          <button class="return-btn" (click)="returnToDispatched()">Return</button>
+        <div class="navigation-actions">
+          <button (click)="returnToDispatched()" class="return-btn">Return to Drone Orders</button>
         </div>
       </div>
-      <div class="right-section">
-        <div id="map" class="map-container"></div>
+      
+      <!-- Right panel with map -->
+      <div class="map-panel">
+        <div class="map-container" id="map"></div>
+        <div class="map-legend">
+          <div class="legend-item">
+            <span class="legend-marker hq"></span>
+            <span>Headquarters</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-marker destination"></span>
+            <span>Destination</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-marker drone"></span>
+            <span>Drone</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
   
+  <!-- No order found state -->
   <ng-template #noOrder>
     <div class="error-message">
-      <p>Order not found or could not be loaded.</p>
-      <button class="return-btn" (click)="returnToDispatched()">Return to Dashboard</button>
+      <div class="error-icon">!</div>
+      <h3>Order Not Found</h3>
+      <p>Order information could not be loaded or this order doesn't exist.</p>
+      <button (click)="returnToDispatched()" class="return-btn">Return to Drone Orders</button>
     </div>
   </ng-template>
 </div>

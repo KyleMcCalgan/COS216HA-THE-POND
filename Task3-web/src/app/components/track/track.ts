@@ -3,6 +3,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 
+/**
+ * Interface for Order Details
+ */
 interface OrderDetails {
   products: string[];
   customer: string;
@@ -18,27 +21,40 @@ interface OrderDetails {
   styleUrls: ['./track.css']
 })
 export class Track implements OnInit, AfterViewInit {
+  //---------------------------------------------------
+  // PROPERTIES
+  //---------------------------------------------------
   orderId: string | null = null;
   orderDetails: OrderDetails | null = null;
   private map!: L.Map;
   private droneMarker: L.Marker | null = null;
   private destinationMarker: L.Marker | null = null;
 
+  // Location coordinates
+  //---------------------------------------------------
   // Hatfield, Pretoria coordinates (precise center point)
   hatfieldLat: number = -25.7522;
   hatfieldLng: number = 28.2396;
   private hatfieldCoordinates: L.LatLngExpression = [this.hatfieldLat, this.hatfieldLng];
 
+  // Headquarters coordinates
   HQlat: number = -25.7472;
   HQlng: number = 28.2511;
   private HQCoordinates: L.LatLngExpression = [this.HQlat, this.HQlng];
 
-  // Mocked drone coordinates need to change to API
+  // Mocked drone coordinates (to be replaced with API data)
   private droneCoordinates: L.LatLngExpression = [-25.7470, 28.2295];
 
+  //---------------------------------------------------
+  // CONSTRUCTOR & LIFECYCLE HOOKS
+  //---------------------------------------------------
   constructor(private route: ActivatedRoute, private router: Router) {}
 
+  /**
+   * Initialize component and load order data
+   */
   ngOnInit() {
+    // Get order ID from route parameters
     this.orderId = this.route.snapshot.paramMap.get('orderId');
     
     // Mock order details (will be replaced with API call)
@@ -53,10 +69,19 @@ export class Track implements OnInit, AfterViewInit {
     };
   }
 
+  /**
+   * Initialize map after view has been initialized
+   */
   ngAfterViewInit() {
     this.initMap();
   }
 
+  //---------------------------------------------------
+  // MAP INITIALIZATION
+  //---------------------------------------------------
+  /**
+   * Initialize the Leaflet map with markers and boundaries
+   */
   private initMap(): void {
     // Create the map instance centered on HQ coordinates
     this.map = L.map('map').setView(this.HQCoordinates, 14);
@@ -67,17 +92,40 @@ export class Track implements OnInit, AfterViewInit {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
 
-    // Add a marker for the operation center in Hatfield
-    const operationCenterMarker = L.marker([this.hatfieldLat, this.hatfieldLng])
-      .addTo(this.map)
-      .bindPopup('Operation Center: Hatfield');
 
-    // Add a marker for the headquarters
+    
+    // Add headquarters marker
+    this.addHeadquartersMarker();
+    
+    // Add 5km operational radius circle
+    this.addOperationalRadiusCircle();
+    
+    // Add drone marker
+    this.addDroneMarker();
+    
+    // Add destination marker if order details exist
+    if (this.orderDetails && this.orderDetails.destination) {
+      this.addDestinationMarker();
+    }
+  }
+
+  //---------------------------------------------------
+  // MARKER CREATION METHODS
+  //---------------------------------------------------
+
+  /**
+   * Add headquarters marker to the map
+   */
+  private addHeadquartersMarker(): void {
     const headquartersMarker = L.marker([this.HQlat, this.HQlng])
       .addTo(this.map)
       .bindPopup('Headquarters');
+  }
 
-    // Add a 5km radius circle around Headquarters
+  /**
+   * Add 5km operational radius circle around HQ
+   */
+  private addOperationalRadiusCircle(): void {
     const radiusInMeters = 5000;
     const circle = L.circle(this.HQCoordinates, {
       radius: radiusInMeters,
@@ -86,8 +134,13 @@ export class Track implements OnInit, AfterViewInit {
       fill: false,
       dashArray: '5, 10'
     }).addTo(this.map);
+  }
 
-    // Add drone marker with custom icon or fallback
+  /**
+   * Add drone marker to the map
+   */
+  private addDroneMarker(): void {
+    // Create drone icon with fallback if image not found
     let droneIcon: L.Icon | L.DivIcon;
     try {
       droneIcon = L.icon({
@@ -100,28 +153,61 @@ export class Track implements OnInit, AfterViewInit {
       console.warn('Drone icon not found, using default marker:', e);
       droneIcon = new L.Icon.Default();
     }
+    
+    // Add drone marker to map
     this.droneMarker = L.marker(this.droneCoordinates, { icon: droneIcon })
       .addTo(this.map)
       .bindPopup(`Drone ID: ${this.orderDetails?.droneId || 'Unknown'}`);
-
-    // Add destination marker
-    if (this.orderDetails && this.orderDetails.destination) {
-      const destCoords: L.LatLngExpression = [
-        this.orderDetails.destination.latitude,
-        this.orderDetails.destination.longitude
-      ];
-      this.destinationMarker = L.marker(destCoords)
-        .addTo(this.map)
-        .bindPopup('Delivery Destination');
-
-      // Fit bounds to show all markers, but enforce HQ center afterward
-      const bounds = L.latLngBounds([this.HQCoordinates, this.hatfieldCoordinates, this.droneCoordinates, destCoords]);
-      this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-      // Explicitly set the center back to HQ to override fitBounds adjustment
-      this.map.setView(this.HQCoordinates, 14);
-    }
   }
 
+  /**
+   * Add destination marker with custom color
+   */
+  private addDestinationMarker(): void {
+    if (!this.orderDetails || !this.orderDetails.destination) return;
+    
+    // Get destination coordinates
+    const destCoords: L.LatLngExpression = [
+      this.orderDetails.destination.latitude,
+      this.orderDetails.destination.longitude
+    ];
+    
+    // Custom destination icon with red color
+    const destinationIcon = L.divIcon({
+      className: 'destination-marker',
+      html: '<div style="background-color:#FF5722; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+    
+    // Add destination marker to map
+    this.destinationMarker = L.marker(destCoords, { icon: destinationIcon })
+      .addTo(this.map)
+      .bindPopup('Delivery Destination');
+    
+    // Calculate bounds to include all points
+    const bounds = L.latLngBounds([
+      this.HQCoordinates, 
+      this.hatfieldCoordinates, 
+      this.droneCoordinates, 
+      destCoords
+    ]);
+
+    // First fit bounds to see all markers
+    this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+
+    // Then explicitly set the view back to HQ with a slight delay to ensure it takes effect
+    setTimeout(() => {
+      this.map.setView(this.HQCoordinates, 14);
+    }, 100);
+  }
+
+  //---------------------------------------------------
+  // NAVIGATION
+  //---------------------------------------------------
+  /**
+   * Navigate back to dispatched orders view
+   */
   returnToDispatched() {
     this.router.navigate(['/operator/dispatched-orders']);
   }
