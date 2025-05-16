@@ -17,3 +17,12 @@ start the server by running the following:
     -npm install
     -node server.js
     -follow instructions in terminal 
+
+
+AVAIALBLE: is drone available == true and no order ID
+
+DELIVERING: is drone available == false and order ID not null
+
+WAITING_TO_DELIVER is drone available == true and order ID not null
+
+DEAD: is drone available == false and order ID not null and altitude > 30
