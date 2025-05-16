@@ -42,6 +42,42 @@ const connectionTimestamps = new Map();
 // Store database changes (for monitoring)
 const databaseChanges = [];
 
+
+// Function to calculate distance between two coordinates in meters
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (value) => value * Math.PI / 180;
+    
+    const R = 6371000; // Earth radius in meters
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    
+    return R * c;
+}
+
+// HQ coordinates (Hatfield) - exact coordinates
+const HQ_LATITUDE = 25.7472;
+const HQ_LONGITUDE = 28.2511;
+
+// Simplified function to determine if drone is at HQ (exact coordinate match)
+function isDroneAtHQ(latitude, longitude) {
+    // Convert string coordinates to numbers and round to 4 decimal places for comparison
+    const lat = parseFloat(parseFloat(latitude).toFixed(4));
+    const lng = parseFloat(parseFloat(longitude).toFixed(4));
+    const hqLat = parseFloat(HQ_LATITUDE.toFixed(4));
+    const hqLng = parseFloat(HQ_LONGITUDE.toFixed(4));
+    
+    // Log for debugging
+    console.log(`Comparing drone position (${lat}, ${lng}) with HQ (${hqLat}, ${hqLng})`);
+    
+    // Exact match with HQ coordinates (rounded to 4 decimal places)
+    return lat === hqLat && lng === hqLng;
+}
+
 // Create a function to broadcast server logs
 function broadcastServerLog(message, type = 'info') {
     const logMessage = JSON.stringify({
@@ -395,6 +431,75 @@ wss.on('connection', (ws) => {
     });
 });
 
+// Function to categorize drones based on their status
+async function categorizeDrones() {
+    try {
+        const result = await callApi('getAllDrones');
+        
+        if (!result.success) {
+            console.error('Failed to fetch drones:', result.message);
+            return {
+                error: result.message
+            };
+        }
+        
+        const drones = result.data;
+        const categories = {
+            CURRENTLY_DELIVERING: [],
+            WAITING_TO_DELIVER: [],
+            AVAILABLE: [],
+            DEAD: []
+        };
+        
+        drones.forEach(drone => {
+            // Fix the case sensitivity issue - check for both order_id and Order_ID
+            const orderID = drone.order_id || drone.Order_ID;
+            
+            // Convert altitude to number
+            const altitude = parseFloat(drone.altitude);
+            
+            // Log categorization criteria
+            console.log(`\nDrone ${drone.id} Categorization:`);
+            console.log(`  Available: ${drone.is_available}`);
+            console.log(`  Order ID: ${orderID || 'None'}`);
+            console.log(`  Altitude: ${altitude}`);
+            
+            // AVAILABLE: is_available = true and no order_id
+            if (drone.is_available && !orderID) {
+                console.log(`  Categorized as: AVAILABLE`);
+                categories.AVAILABLE.push(drone);
+            }
+            // CURRENTLY_DELIVERING: is_available = false and order_id is not null
+            else if (!drone.is_available && orderID) {
+                console.log(`  Categorized as: CURRENTLY_DELIVERING`);
+                categories.CURRENTLY_DELIVERING.push(drone);
+            }
+            // WAITING_TO_DELIVER: is_available = true and order_id is not null
+            else if (drone.is_available && orderID) {
+                console.log(`  Categorized as: WAITING_TO_DELIVER`);
+                categories.WAITING_TO_DELIVER.push(drone);
+            }
+            // DEAD: is_available = false and altitude > 30
+            else if (!drone.is_available && altitude > 30) {
+                console.log(`  Categorized as: DEAD`);
+                categories.DEAD.push(drone);
+            }
+            // Any other drones that don't fit these categories (is_available = false, no order_id, altitude <= 30)
+            else {
+                console.log(`  Categorized as: DEAD (default for unavailable drones)`);
+                categories.DEAD.push(drone);
+            }
+        });
+        
+        return categories;
+    } catch (error) {
+        console.error('Error categorizing drones:', error);
+        return {
+            error: error.message
+        };
+    }
+}
+
 // Create command line interface for server commands
 const rl = readline.createInterface({
     input: process.stdin,
@@ -403,7 +508,7 @@ const rl = readline.createInterface({
 });
 
 // Process server commands
-rl.on('line', (input) => {
+rl.on('line', async (input) => {
     const commandFull = input.trim();
     const command = commandFull.split(' ')[0].toUpperCase();
     const args = commandFull.substring(command.length).trim();
@@ -429,44 +534,215 @@ rl.on('line', (input) => {
             break;
             
         case 'CURRENTLY_DELIVERING':
-            console.log('Currently delivering orders:');
-            if (deliveringOrders.size === 0) {
-                console.log('  No orders currently being delivered');
+            console.log('Fetching drones that are currently delivering...');
+            const droneCategories = await categorizeDrones();
+            
+            if (droneCategories.error) {
+                console.error('Error fetching drone status:', droneCategories.error);
+                break;
+            }
+            
+            console.log('\nDrones CURRENTLY DELIVERING:');
+            const deliveringDrones = droneCategories.CURRENTLY_DELIVERING;
+            
+            if (deliveringDrones.length === 0) {
+                console.log('  No drones are currently delivering');
             } else {
-                let i = 1;
-                deliveringOrders.forEach(order => {
-                    console.log(`  ${i++}. Order ID: ${order.order_id}, Tracking: ${order.tracking_num}, Customer ID: ${order.customer_id}`);
+                deliveringDrones.forEach((drone, index) => {
+                    console.log(`  ${index + 1}. Drone ID: ${drone.id}, Battery: ${drone.battery_level}%, Altitude: ${drone.altitude}m`);
+                    console.log(`     Location: (${drone.latest_latitude}, ${drone.latest_longitude})`);
+                    console.log(`     Order ID: ${drone.order_id || 'None'}`);
+                    if (drone.operator) {
+                        console.log(`     Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
+                    }
                 });
             }
             break;
             
-        case 'DRONE_STATUS':
+        case 'WAITING_TO_DELIVER':
+            console.log('Fetching drones that are waiting to deliver...');
+            const waitingCategories = await categorizeDrones();
+            
+            if (waitingCategories.error) {
+                console.error('Error fetching drone status:', waitingCategories.error);
+                break;
+            }
+            
+            console.log('\nDrones WAITING TO DELIVER:');
+            const waitingDrones = waitingCategories.WAITING_TO_DELIVER;
+            
+            if (waitingDrones.length === 0) {
+                console.log('  No drones are waiting to deliver');
+            } else {
+                waitingDrones.forEach((drone, index) => {
+                    console.log(`  ${index + 1}. Drone ID: ${drone.id}, Battery: ${drone.battery_level}%`);
+                    console.log(`     Location: At HQ (${drone.latest_latitude}, ${drone.latest_longitude})`);
+                    console.log(`     Order ID: ${drone.order_id || 'None'}`);
+                    if (drone.operator) {
+                        console.log(`     Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
+                    }
+                });
+            }
+            break;
+            
+        case 'AVAILABLE':
+            console.log('Fetching available drones...');
+            const availableCategories = await categorizeDrones();
+            
+            if (availableCategories.error) {
+                console.error('Error fetching drone status:', availableCategories.error);
+                break;
+            }
+            
+            console.log('\nAVAILABLE Drones:');
+            const availableDrones = availableCategories.AVAILABLE;
+            
+            if (availableDrones.length === 0) {
+                console.log('  No drones are available');
+            } else {
+                availableDrones.forEach((drone, index) => {
+                    console.log(`  ${index + 1}. Drone ID: ${drone.id}, Battery: ${drone.battery_level}%`);
+                    const atHQ = isDroneAtHQ(drone.latest_latitude, drone.latest_longitude);
+                    console.log(`     Location: ${atHQ ? 'At HQ' : 'Not at HQ'} (${drone.latest_latitude}, ${drone.latest_longitude})`);
+                    if (drone.operator) {
+                        console.log(`     Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
+                    }
+                });
+            }
+            break;
+            
+        case 'DEAD':
+            console.log('Fetching dead drones...');
+            const deadCategories = await categorizeDrones();
+            
+            if (deadCategories.error) {
+                console.error('Error fetching drone status:', deadCategories.error);
+                break;
+            }
+            
+            console.log('\nDEAD Drones:');
+            const deadDrones = deadCategories.DEAD;
+            
+            if (deadDrones.length === 0) {
+                console.log('  No drones are dead');
+            } else {
+                deadDrones.forEach((drone, index) => {
+                    const reason = drone.altitude > 30 ? 'Altitude exceeded 30m' : 'Battery depleted or crashed';
+                    console.log(`  ${index + 1}. Drone ID: ${drone.id}, Battery: ${drone.battery_level}%, Altitude: ${drone.altitude}m`);
+                    console.log(`     Location: (${drone.latest_latitude}, ${drone.latest_longitude})`);
+                    console.log(`     Reason: ${reason}`);
+                    if (drone.operator) {
+                        console.log(`     Last Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
+                    }
+                });
+            }
+            break;
+            
+            case 'DIAGNOSE_LOCATION':
+            console.log('Running diagnostic on all drones...');
+            const diagDrones = await callApi('getAllDrones');
+            
+            if (diagDrones.success) {
+                console.log(`\nDrone Categorization Rules:`);
+                console.log(`  AVAILABLE: is_available = true and no order ID`);
+                console.log(`  CURRENTLY_DELIVERING: is_available = false and order ID not null`);
+                console.log(`  WAITING_TO_DELIVER: is_available = true and order ID not null`);
+                console.log(`  DEAD: is_available = false (with altitude > 30 or no order ID)\n`);
+                
+                diagDrones.data.forEach(drone => {
+                    // Fix the case sensitivity issue - check for both order_id and Order_ID
+                    const orderID = drone.order_id || drone.Order_ID;
+                    
+                    // Convert altitude to number
+                    const altitude = parseFloat(drone.altitude);
+                    
+                    console.log(`Drone ${drone.id}:`);
+                    console.log(`  Position: (${drone.latest_latitude}, ${drone.latest_longitude})`);
+                    console.log(`  Available: ${drone.is_available ? 'Yes' : 'No'}`);
+                    console.log(`  Order ID: ${orderID || 'None'}`);
+                    console.log(`  Altitude: ${altitude} meters`);
+                    
+                    // Determine category based on the new rules
+                    let category;
+                    
+                    if (drone.is_available && !orderID) {
+                        category = "AVAILABLE";
+                    } else if (!drone.is_available && orderID) {
+                        category = "CURRENTLY_DELIVERING";
+                    } else if (drone.is_available && orderID) {
+                        category = "WAITING_TO_DELIVER";
+                    } else if (!drone.is_available && altitude > 30) {
+                        category = "DEAD";
+                    } else {
+                        // Default for unavailable drones with no order ID and altitude <= 30
+                        category = "DEAD";
+                    }
+                    
+                    console.log(`  Category: ${category}\n`);
+                });
+            } else {
+                console.log('Failed to fetch drone data for diagnostics:', diagDrones.message);
+            }
+            break;
+    
+case 'DRONE_STATUS':
             console.log('Fetching drone status...');
-            callApi('getAllDrones')
-                .then(result => {
-                    if (result.success) {
-                        console.log('Current drone status:');
-                        if (result.data.length === 0) {
-                            console.log('  No drones found');
+            const droneResult = await callApi('getAllDrones');
+            
+            if (droneResult.success) {
+                const droneCategories = await categorizeDrones();
+                
+                console.log('\nDrone Status Summary:');
+                console.log(`  Total Drones: ${droneResult.data.length}`);
+                console.log(`  Currently Delivering: ${droneCategories.CURRENTLY_DELIVERING.length}`);
+                console.log(`  Waiting to Deliver: ${droneCategories.WAITING_TO_DELIVER.length}`);
+                console.log(`  Available: ${droneCategories.AVAILABLE.length}`);
+                console.log(`  Dead: ${droneCategories.DEAD.length}`);
+                
+                console.log('\nDetailed Drone Status:');
+                if (droneResult.data.length === 0) {
+                    console.log('  No drones found');
+                } else {
+                    droneResult.data.forEach((drone, index) => {
+                        // Fix the case sensitivity issue - check for both order_id and Order_ID
+                        const orderID = drone.order_id || drone.Order_ID;
+                        
+                        // Convert altitude to number
+                        const altitude = parseFloat(drone.altitude);
+                        
+                        // Determine category
+                        let status;
+                        
+                        if (drone.is_available && !orderID) {
+                            status = "AVAILABLE";
+                        } else if (!drone.is_available && orderID) {
+                            status = "CURRENTLY_DELIVERING";
+                        } else if (drone.is_available && orderID) {
+                            status = "WAITING_TO_DELIVER";
+                        } else if (!drone.is_available && altitude > 30) {
+                            status = "DEAD";
                         } else {
-                            result.data.forEach((drone, index) => {
-                                console.log(`  ${index + 1}. Drone ID: ${drone.id}, Battery: ${drone.battery_level}%, Available: ${drone.is_available ? 'Yes' : 'No'}`);
-                                console.log(`     Location: (${drone.latest_latitude}, ${drone.latest_longitude}), Altitude: ${drone.altitude}m`);
-                                if (drone.operator) {
-                                    console.log(`     Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
-                                }
-                            });
+                            // Default for unavailable drones with no order ID and altitude <= 30
+                            status = "DEAD";
                         }
                         
-                        // Also broadcast drone status to all clients
-                        broadcastDroneStatus();
-                    } else {
-                        console.log('Failed to fetch drone status:', result.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching drone status:', error);
-                });
+                        console.log(`  ${index + 1}. Drone ID: ${drone.id}, Status: ${status}`);
+                        console.log(`     Available: ${drone.is_available ? 'Yes' : 'No'}`);
+                        console.log(`     Position: (${drone.latest_latitude}, ${drone.latest_longitude}), Altitude: ${altitude}m`);
+                        console.log(`     Order ID: ${orderID || 'None'}`);
+                        console.log(`     Battery Level: ${drone.battery_level}%`);
+                        if (drone.operator) {
+                            console.log(`     Operator: ${drone.operator.username} (ID: ${drone.operator.id})`);
+                        }
+                        console.log('');
+                    });
+                }
+                
+                // Also broadcast drone status to all clients
+                broadcastDroneStatus();
+            } else {
+                console.log('Failed to fetch drone status:', droneResult.message);
+            }
             break;
             
         case 'KILL':
@@ -538,6 +814,16 @@ rl.on('line', (input) => {
             console.log(`  Running on port: ${address.port}`);
             console.log(`  API URL: ${API_URL}`);
             console.log(`  Active WebSocket connections: ${wss.clients.size}`);
+            
+            // Get drone status for each category
+            const infoCategories = await categorizeDrones();
+            if (!infoCategories.error) {
+                console.log(`  Drones currently delivering: ${infoCategories.CURRENTLY_DELIVERING.length}`);
+                console.log(`  Drones waiting to deliver: ${infoCategories.WAITING_TO_DELIVER.length}`);
+                console.log(`  Available drones: ${infoCategories.AVAILABLE.length}`);
+                console.log(`  Dead drones: ${infoCategories.DEAD.length}`);
+            }
+            
             console.log(`  Orders being delivered: ${deliveringOrders.size}`);
             console.log(`  Server uptime: ${Math.floor(process.uptime())} seconds`);
             break;
@@ -572,7 +858,10 @@ rl.on('line', (input) => {
         case 'HELP':
             console.log('Available commands:');
             console.log('  QUIT - Shutdown the server');
-            console.log('  CURRENTLY_DELIVERING - Show orders being delivered');
+            console.log('  CURRENTLY_DELIVERING - Show drones that are currently delivering orders');
+            console.log('  WAITING_TO_DELIVER - Show drones that are waiting to deliver at HQ');
+            console.log('  AVAILABLE - Show drones that are available for delivery');
+            console.log('  DEAD - Show drones that are dead or have crashed');
             console.log('  DRONE_STATUS - Show status of all drones');
             console.log('  KILL <username> - Disconnect a specific user');
             console.log('  TEST_API - Test the API connection');
@@ -622,7 +911,10 @@ const selectPort = () => {
             console.log(`WebSocket server active`);
             console.log('\nAvailable commands:');
             console.log('  QUIT - Shutdown the server');
-            console.log('  CURRENTLY_DELIVERING - Show orders being delivered');
+            console.log('  CURRENTLY_DELIVERING - Show drones that are currently delivering orders');
+            console.log('  WAITING_TO_DELIVER - Show drones that are waiting to deliver at HQ');
+            console.log('  AVAILABLE - Show drones that are available for delivery');
+            console.log('  DEAD - Show drones that are dead or have crashed');
             console.log('  DRONE_STATUS - Show status of all drones');
             console.log('  KILL <username> - Disconnect a specific user');
             console.log('  TEST_API - Test the API connection');

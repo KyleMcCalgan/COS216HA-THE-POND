@@ -25,7 +25,8 @@ function handleUpdateDrone($data) {
         !isset($data['latest_latitude']) && 
         !isset($data['latest_longitude']) && 
         !isset($data['altitude']) && 
-        !isset($data['battery_level'])) {
+        !isset($data['battery_level']) &&
+        !isset($data['order_id'])) {
         
         apiResponse(false, null, 'No fields to update were provided.');
         exit;
@@ -44,6 +45,17 @@ function handleUpdateDrone($data) {
             $updateFields[] = "current_operator_id = ?";
             $bindTypes .= "i";
             $bindParams[] = $data['current_operator_id'];
+        }
+    }
+    
+    // Order ID (can be null)
+    if (isset($data['order_id'])) {
+        if ($data['order_id'] === null) {
+            $updateFields[] = "order_id = NULL";
+        } else {
+            $updateFields[] = "order_id = ?";
+            $bindTypes .= "i";
+            $bindParams[] = intval($data['order_id']);
         }
     }
     
