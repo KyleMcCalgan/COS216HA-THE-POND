@@ -1,6 +1,6 @@
 <?php
 /**
- * Update Drone Handler
+ * Update Drone Handler - Fixed Version
  * 
  * Your Name, Surname, Student Number
  * 
@@ -20,14 +20,20 @@ function handleUpdateDrone($data) {
     $droneId = intval($data['id']);
     
     // Check if at least one field to update is provided
-    if (!isset($data['current_operator_id']) && 
-        !isset($data['is_available']) && 
-        !isset($data['latest_latitude']) && 
-        !isset($data['latest_longitude']) && 
-        !isset($data['altitude']) && 
-        !isset($data['battery_level']) &&
-        !isset($data['order_id'])) {
-        
+    $hasUpdateField = false;
+    
+    // Check all possible fields, including null values
+    if (array_key_exists('current_operator_id', $data) || 
+        array_key_exists('order_id', $data) ||
+        isset($data['is_available']) || 
+        isset($data['latest_latitude']) || 
+        isset($data['latest_longitude']) || 
+        isset($data['altitude']) || 
+        isset($data['battery_level'])) {
+        $hasUpdateField = true;
+    }
+    
+    if (!$hasUpdateField) {
         apiResponse(false, null, 'No fields to update were provided.');
         exit;
     }
@@ -38,7 +44,7 @@ function handleUpdateDrone($data) {
     $bindParams = [];
     
     // Current operator ID (can be null)
-    if (isset($data['current_operator_id'])) {
+    if (array_key_exists('current_operator_id', $data)) {
         if ($data['current_operator_id'] === null) {
             $updateFields[] = "current_operator_id = NULL";
         } else {
@@ -49,7 +55,7 @@ function handleUpdateDrone($data) {
     }
     
     // Order ID (can be null)
-    if (isset($data['order_id'])) {
+    if (array_key_exists('order_id', $data)) {
         if ($data['order_id'] === null) {
             $updateFields[] = "order_id = NULL";
         } else {
@@ -197,3 +203,4 @@ function handleUpdateDrone($data) {
         apiResponse(false, null, 'Database error: ' . $e->getMessage());
     }
 }
+?>

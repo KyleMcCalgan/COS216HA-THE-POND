@@ -190,6 +190,10 @@
                         <label for="droneOperatorId">Operator ID (optional):</label>
                         <input type="number" id="droneOperatorId" placeholder="Leave empty for no operator">
                     </div>
+                    <div class="input-group">
+                        <label for="droneOrderID">Order_ID(Optional)</label>
+                        <input type="number" id="droneOrderID" placeholder="Leave empty for null">
+                    </div>
                     <button id="createDroneBtn">Create Drone</button>
                 </div>
 
@@ -198,42 +202,48 @@
                     <button id="getAllDronesBtn">Get All Drones</button>
                 </div>
 
-                <div class="api-section">
-                    <h3>Update Drone</h3>
-                    <div class="input-group">
-                        <label for="updateDroneId">Drone ID:</label>
-                        <input type="number" id="updateDroneId" value="1">
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneIsAvailable">Is Available (optional):</label>
-                        <select id="updateDroneIsAvailable">
-                            <option value="">-- No Change --</option>
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneLatitude">Latitude (optional):</label>
-                        <input type="text" id="updateDroneLatitude" placeholder="Leave empty to not update">
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneLongitude">Longitude (optional):</label>
-                        <input type="text" id="updateDroneLongitude" placeholder="Leave empty to not update">
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneAltitude">Altitude (optional):</label>
-                        <input type="number" id="updateDroneAltitude" placeholder="Leave empty to not update">
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneBatteryLevel">Battery Level (optional, 0-100):</label>
-                        <input type="number" id="updateDroneBatteryLevel" placeholder="Leave empty to not update" min="0" max="100">
-                    </div>
-                    <div class="input-group">
-                        <label for="updateDroneOperatorId">Operator ID (optional):</label>
-                        <input type="text" id="updateDroneOperatorId" placeholder="Leave empty to not update, use 'null' to remove">
-                    </div>
-                    <button id="updateDroneBtn">Update Drone</button>
-                </div>
+
+<div class="api-section">
+    <h3>Update Drone</h3>
+    <div class="input-group">
+        <label for="updateDroneId">Drone ID:</label>
+        <input type="number" id="updateDroneId" value="1">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneIsAvailable">Is Available (optional):</label>
+        <select id="updateDroneIsAvailable">
+            <option value="">-- No Change --</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+        </select>
+    </div>
+    <div class="input-group">
+        <label for="updateDroneLatitude">Latitude (optional):</label>
+        <input type="text" id="updateDroneLatitude" placeholder="Leave empty to not update">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneLongitude">Longitude (optional):</label>
+        <input type="text" id="updateDroneLongitude" placeholder="Leave empty to not update">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneAltitude">Altitude (optional):</label>
+        <input type="number" id="updateDroneAltitude" placeholder="Leave empty to not update">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneBatteryLevel">Battery Level (optional, 0-100):</label>
+        <input type="number" id="updateDroneBatteryLevel" placeholder="Leave empty to not update" min="0" max="100">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneOperatorId">Operator ID (optional):</label>
+        <input type="text" id="updateDroneOperatorId" placeholder="Leave empty to not update, use 'null' to remove">
+    </div>
+    <div class="input-group">
+        <label for="updateDroneOrderId">Order ID (optional):</label>
+        <input type="text" id="updateDroneOrderId" placeholder="Leave empty to not update, use 'null' to remove">
+    </div>
+    <button id="updateDroneBtn">Update Drone</button>
+</div>
+
             </div>
 
             <!-- Debug Section -->

@@ -444,47 +444,75 @@ document.addEventListener('DOMContentLoaded', function() {
         makeApiRequest({ type: 'getAllDrones' });
     });
 
-    // Update Drone
-    document.getElementById('updateDroneBtn').addEventListener('click', function() {
-        const droneId = document.getElementById('updateDroneId').value;
-        const isAvailable = document.getElementById('updateDroneIsAvailable').value;
-        const latitude = document.getElementById('updateDroneLatitude').value;
-        const longitude = document.getElementById('updateDroneLongitude').value;
-        const altitude = document.getElementById('updateDroneAltitude').value;
-        const batteryLevel = document.getElementById('updateDroneBatteryLevel').value;
-        const operatorId = document.getElementById('updateDroneOperatorId').value;
-        
-        const data = {
-            type: 'updateDrone',
-            id: parseInt(droneId)
-        };
-        
-        // Only add fields that have values
-        if (isAvailable !== '') {
-            data.is_available = isAvailable === 'true';
-        }
-        
-        if (latitude && longitude) {
-            data.latest_latitude = parseFloat(latitude);
-            data.latest_longitude = parseFloat(longitude);
-        }
-        
-        if (altitude) {
-            data.altitude = parseFloat(altitude);
-        }
-        
-        if (batteryLevel) {
-            data.battery_level = parseInt(batteryLevel);
-        }
-        
-        if (operatorId === 'null') {
-            data.current_operator_id = null;
-        } else if (operatorId) {
-            data.current_operator_id = parseInt(operatorId);
-        }
-        
-        makeApiRequest(data);
+
+// Fixed Update Drone event handler with null checking
+document.getElementById('updateDroneBtn').addEventListener('click', function() {
+    // Safe function to get field values with default values if field doesn't exist
+    function getFieldValue(id, defaultValue = '') {
+        const element = document.getElementById(id);
+        return element ? element.value : defaultValue;
+    }
+    
+    // Get all values safely
+    const droneId = getFieldValue('updateDroneId', '1');
+    const isAvailable = getFieldValue('updateDroneIsAvailable');
+    const latitude = getFieldValue('updateDroneLatitude');
+    const longitude = getFieldValue('updateDroneLongitude');
+    const altitude = getFieldValue('updateDroneAltitude');
+    const batteryLevel = getFieldValue('updateDroneBatteryLevel');
+    const operatorId = getFieldValue('updateDroneOperatorId');
+    const orderId = getFieldValue('updateDroneOrderId');
+    
+    // Log the values to check what we're working with
+    console.log({
+        droneId, isAvailable, latitude, longitude, 
+        altitude, batteryLevel, operatorId, orderId
     });
+    
+    // Create data object
+    const data = {
+        type: 'updateDrone',
+        id: parseInt(droneId)
+    };
+    
+    // Only add fields that have values
+    if (isAvailable !== '') {
+        data.is_available = isAvailable === 'true';
+    }
+    
+    if (latitude && longitude) {
+        data.latest_latitude = parseFloat(latitude);
+        data.latest_longitude = parseFloat(longitude);
+    }
+    
+    if (altitude) {
+        data.altitude = parseFloat(altitude);
+    }
+    
+    if (batteryLevel) {
+        data.battery_level = parseInt(batteryLevel);
+    }
+    
+    if (operatorId === 'null') {
+        data.current_operator_id = null;
+    } else if (operatorId) {
+        data.current_operator_id = parseInt(operatorId);
+    }
+    
+    if (orderId === 'null') {
+        data.order_id = null;
+    } else if (orderId) {
+        data.order_id = parseInt(orderId);
+    }
+    
+    // Log the final request data
+    console.log('Sending update drone request:', data);
+    
+    // Make the API request
+    makeApiRequest(data);
+});
+
+
     
     // Initialize UI with a welcome message
     addLogEntry('Debug panel initialized. Welcome to the Couriers API Test Client!', 'info');
