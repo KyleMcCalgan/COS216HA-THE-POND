@@ -373,6 +373,32 @@ wss.on('connection', (ws) => {
                         message: loginResult.message
                     }));
                     break;
+
+                case 'getProducts':
+    try {
+        // Call the API to get all products
+        const productsResult = await callApi('getAllProducts');
+        
+        if (productsResult.success) {
+            ws.send(JSON.stringify({
+                action: 'products_update',
+                products: productsResult.data
+            }));
+            console.log(`Sent ${productsResult.data.length} products to client`);
+        } else {
+            ws.send(JSON.stringify({
+                action: 'error',
+                message: 'Failed to fetch products: ' + productsResult.message
+            }));
+        }
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        ws.send(JSON.stringify({
+            action: 'error',
+            message: 'Error fetching products: ' + error.message
+        }));
+    }
+    break;
                 
                 case 'getOrders':
                 case 'getDrones':
@@ -558,6 +584,34 @@ rl.on('line', async (input) => {
                 });
             }
             break;
+
+        case 'PRODUCTS':
+    console.log('Fetching all products...');
+    try {
+        const productsData = await callApi('getAllProducts');
+        
+        if (productsData.success) {
+            const products = productsData.data;
+            console.log(`\nTotal Products: ${products.length}`);
+            
+            if (products.length === 0) {
+                console.log('  No products found');
+            } else {
+                products.forEach((product, index) => {
+                    console.log(`\n  ${index + 1}. ${product.title}`);
+                    console.log(`     ID: ${product.id}`);
+                    console.log(`     Brand: ${product.brand}`);
+                    console.log(`     Categories: ${product.categories || 'None'}`);
+                    console.log(`     Available: ${product.is_available ? 'Yes' : 'No'}`);
+                });
+            }
+        } else {
+            console.log(`Failed to fetch products: ${productsData.message}`);
+        }
+    } catch (error) {
+        console.error('Error fetching products:', error);
+    }
+    break;
             
         case 'WAITING_TO_DELIVER':
             console.log('Fetching drones that are waiting to deliver...');
@@ -895,6 +949,7 @@ if (!drone.is_available && altitude > 30) {
             console.log('  LIST_CLIENTS - List all connected clients');
             console.log('  API_URL - Show current API URL');
             console.log('  INFO - Show server information');
+            console.log('  PRODUCTS - Show all available products');
             console.log('  BROADCAST <message> - Send a message to all connected clients');
             console.log('  CLEAR_CHANGES - Clear database changes history');
             console.log('  HELP - Show this help message');

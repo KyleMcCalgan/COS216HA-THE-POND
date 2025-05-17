@@ -1,20 +1,111 @@
 <div class="customer-container">
   <h2>Customer Dashboard</h2>
-  <h3>Your Orders</h3>
-
-  <div *ngIf="orders.length === 0" class="empty-state">
-    <p>There are currently no orders.</p>
+  
+  <!-- Navigation tabs -->
+  <div class="navigation-tabs">
+    <button 
+      [class.active]="activeSection === 'storage'" 
+      (click)="showSection('storage')">
+      Available Orders
+    </button>
+    <button 
+      [class.active]="activeSection === 'active'" 
+      (click)="showSection('active')">
+      My Active Deliveries
+    </button>
+    <button 
+      [class.active]="activeSection === 'past'" 
+      (click)="showSection('past')">
+      Order History
+    </button>
+  </div>
+  
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your orders...</p>
+  </div>
+  
+  <!-- Error message -->
+  <div *ngIf="!loading && error" class="error-message">
+    <p>{{ error }}</p>
+    <button (click)="refreshOrders()" class="refresh-btn">Try Again</button>
   </div>
 
-  <div *ngIf="orders.length > 0" class="orders-list">
-    <div class="order-card" *ngFor="let order of orders">
-      <div class="order-info">
-        <p><strong>Order ID:</strong> {{ order.orderId }}</p>
-        <p><strong>Product:</strong> {{ order.product }}</p>
-        <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
+  <!-- Available Orders Section -->
+  <div *ngIf="!loading && !error && activeSection === 'storage'" class="section-container">
+    <div class="section-header">
+      <h3>Available Orders in Storage</h3>
+      <button (click)="navigateToNewOrder()" class="create-order-btn">Create New Order</button>
+    </div>
+    
+    <div *ngIf="storageOrders.length === 0" class="empty-state">
+      <p>You have no pending orders in storage.</p>
+      <button (click)="navigateToNewOrder()" class="create-order-btn-large">Create New Order</button>
+    </div>
+    
+    <div *ngIf="storageOrders.length > 0" class="orders-list">
+      <div class="order-card" *ngFor="let order of storageOrders">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+          <p><strong>Product:</strong> {{ order.product }}</p>
+          <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
+          <p *ngIf="order.date"><strong>Date:</strong> {{ order.date }}</p>
+        </div>
+        <div class="track-button">
+          <button (click)="navigateToTrack(order.orderId)">Track</button>
+        </div>
       </div>
-      <div class="track-button">
-        <button (click)="navigateToTrack(order.orderId)">Track</button>
+    </div>
+  </div>
+  
+  <!-- Active Deliveries Section -->
+  <div *ngIf="!loading && !error && activeSection === 'active'" class="section-container">
+    <div class="section-header">
+      <h3>My Active Deliveries</h3>
+      <button (click)="refreshOrders()" class="refresh-btn">Refresh</button>
+    </div>
+    
+    <div *ngIf="activeOrders.length === 0" class="empty-state">
+      <p>You have no active deliveries at the moment.</p>
+    </div>
+    
+    <div *ngIf="activeOrders.length > 0" class="orders-list">
+      <div class="order-card active-order" *ngFor="let order of activeOrders">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+          <p><strong>Product:</strong> {{ order.product }}</p>
+          <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
+          <p *ngIf="order.date"><strong>Date:</strong> {{ order.date }}</p>
+        </div>
+        <div class="track-button">
+          <button (click)="navigateToTrack(order.orderId)" class="track-active-btn">Live Track</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Order History Section -->
+  <div *ngIf="!loading && !error && activeSection === 'past'" class="section-container">
+    <div class="section-header">
+      <h3>Your Order History</h3>
+    </div>
+    
+    <div *ngIf="pastOrders.length === 0" class="empty-state">
+      <p>You don't have any completed orders yet.</p>
+    </div>
+    
+    <div *ngIf="pastOrders.length > 0" class="orders-list">
+      <div class="order-card past-order" *ngFor="let order of pastOrders">
+        <div class="order-info">
+          <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+          <p><strong>Product:</strong> {{ order.product }}</p>
+          <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
+          <p *ngIf="order.date"><strong>Date:</strong> {{ order.date }}</p>
+        </div>
+        <div class="track-button">
+          <button (click)="navigateToTrack(order.orderId)" class="history-btn">Details</button>
+        </div>
       </div>
     </div>
   </div>

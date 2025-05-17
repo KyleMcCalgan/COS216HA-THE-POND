@@ -1,19 +1,31 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+
+interface Order {
+  orderId: string;
+  product: string;
+  status: string;
+  date?: string;
+}
 
 @Component({
   selector: 'app-customer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './customer.html',
   styleUrls: ['./customer.css']
 })
 export class Customer implements OnInit {
-  orders: any[] = [];
+  storageOrders: Order[] = [];
+  activeOrders: Order[] = [];
+  pastOrders: Order[] = [];
   loading = true;
   error = '';
+  
+  // Track which section is currently active
+  activeSection = 'storage'; // Default section to show
 
   constructor(
     private apiService: ApiService,
@@ -40,8 +52,8 @@ export class Customer implements OnInit {
         console.log('API response data:', response);
         
         if (response.success && response.data) {
-          // Process orders for display
-          this.processOrders(response.data);
+          // Process orders and categorize them
+          this.categorizeOrders(response.data);
         } else {
           this.error = response.message || 'Failed to load orders';
           console.error('Failed to load orders:', response.message);
@@ -55,8 +67,10 @@ export class Customer implements OnInit {
     });
   }
 
-  private processOrders(orders: any[]) {
-    this.orders = [];
+  private categorizeOrders(orders: any[]) {
+    this.storageOrders = [];
+    this.activeOrders = [];
+    this.pastOrders = [];
     
     for (const order of orders) {
       try {
@@ -76,23 +90,62 @@ export class Customer implements OnInit {
             .join(', ');
         }
 
+        // Format date if it exists
+        let formattedDate = '';
+        if (order.created_at) {
+          try {
+            const date = new Date(order.created_at);
+            formattedDate = date.toLocaleDateString();
+          } catch (e) {
+            console.warn('Could not format date:', e);
+          }
+        }
+
         // Create processed order object
-        const processedOrder = {
+        const processedOrder: Order = {
           orderId: order.order_id,
           product: productString,
-          status: order.state
+          status: order.state,
+          date: formattedDate
         };
         
-        this.orders.push(processedOrder);
+        // Categorize orders based on their status
+        const status = order.state.toLowerCase();
+        
+        if (status === 'storage') {
+          this.storageOrders.push(processedOrder);
+        } else if (status === 'out_for_delivery' || status === 'out for delivery' || status === 'dispatched' || status === 'shipping') {
+          this.activeOrders.push(processedOrder);
+        } else if (status === 'delivered' || status === 'completed') {
+          this.pastOrders.push(processedOrder);
+        }
       } catch (error) {
         console.error('Error processing order:', error, order);
       }
     }
     
-    console.log('Customer orders processed:', this.orders.length);
+    console.log('Orders categorized:', {
+      storage: this.storageOrders.length,
+      active: this.activeOrders.length,
+      past: this.pastOrders.length
+    });
   }
   
   navigateToTrack(orderId: string) {
     this.router.navigate(['/customer/track', orderId]);
+  }
+  
+  navigateToNewOrder() {
+    this.router.navigate(['/customer/new-order']);
+  }
+  
+  // Method to change which section is shown
+  showSection(section: string) {
+    this.activeSection = section;
+  }
+  
+  // Refresh all orders
+  refreshOrders() {
+    this.fetchOrders();
   }
 }

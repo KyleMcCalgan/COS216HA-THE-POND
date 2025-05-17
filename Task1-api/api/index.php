@@ -97,6 +97,12 @@ switch ($actionType) {
         require_once './handlers/get_all_drones_handler.php';
         handleGetAllDrones($postData);
         break;
+
+    // New handler for getting all products
+    case 'getAllProducts':
+        require_once './handlers/get_all_products_handler.php';
+        handleGetAllProducts($postData);
+        break;
         
     case 'test':
         require_once './handlers/test_handler.php';

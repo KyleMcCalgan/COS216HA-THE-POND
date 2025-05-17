@@ -1,0 +1,89 @@
+<div class="new-order-container">
+  <h2>Create New Order</h2>
+  
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading products...</p>
+  </div>
+  
+  <!-- Error message -->
+  <div *ngIf="!loading && error" class="error-message">
+    <p>{{ error }}</p>
+    <button (click)="fetchProducts()" class="refresh-btn">Try Again</button>
+  </div>
+  
+  <div *ngIf="!loading && !error" class="order-content">
+    <!-- Left column: Product list -->
+    <div class="product-list-section">
+      <h3>Available Products</h3>
+      <div class="search-box">
+        <input type="text" placeholder="Search products..." [(ngModel)]="searchTerm" (input)="filterProducts()">
+      </div>
+      
+      <div class="product-list">
+        <div *ngFor="let product of filteredProducts" 
+             class="product-item"
+             [class.selected]="isProductSelected(product.id)"
+             (click)="toggleProduct(product)">
+          <div class="product-item-info">
+            <span class="product-title">{{ product.title }}</span>
+            <span class="product-brand">{{ product.brand }}</span>
+          </div>
+          <span class="product-select-icon">
+            <span *ngIf="isProductSelected(product.id)">✓</span>
+          </span>
+        </div>
+        
+        <div *ngIf="filteredProducts.length === 0" class="no-products">
+          <p>No products match your search.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Right column: Selected products and order summary -->
+    <div class="order-summary-section">
+      <h3>Your Order <span class="item-count">({{ getTotalSelectedProducts() }}/{{ maxProducts }} products)</span></h3>
+      
+      <div class="selected-products">
+        <div *ngIf="selectedProducts.length === 0" class="no-selected">
+          <p>No products selected yet.</p>
+          <p>Select up to {{ maxProducts }} products from the list.</p>
+        </div>
+        
+        <div *ngFor="let product of selectedProducts" class="selected-item">
+          <div class="selected-item-info">
+            <span class="product-title">{{ product.title }}</span>
+            <span class="product-brand">{{ product.brand }}</span>
+          </div>
+          <div class="selected-item-actions">
+            <div class="quantity-control">
+              <button (click)="decreaseQuantity(product)" [disabled]="product.quantity <= 1">-</button>
+              <span class="quantity">{{ product.quantity }}</span>
+              <button (click)="increaseQuantity(product)" [disabled]="product.quantity >= 7 || getTotalItemCount() >= 7">+</button>
+            </div>
+            <button class="remove-btn" (click)="removeProduct(product)">×</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="total-section" *ngIf="selectedProducts.length > 0">
+        <div class="total-items">
+          <span>Total Items:</span>
+          <span>{{ getTotalItemCount() }}/7</span>
+        </div>
+      </div>
+      
+      <div class="order-actions">
+        <button 
+          class="submit-btn" 
+          [disabled]="selectedProducts.length === 0 || submitting || getTotalItemCount() > 7" 
+          (click)="submitOrder()">
+          <span *ngIf="submitting" class="spinner-small"></span>
+          <span *ngIf="!submitting">Place Order</span>
+        </button>
+        <button class="cancel-btn" (click)="cancelOrder()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
