@@ -83,15 +83,6 @@ function handleCreateOrder($data) {
         }
         $customerStmt->close();
         
-        // Get next available order ID for this customer
-        $orderIdStmt = $conn->prepare("SELECT MAX(order_id) as max_id FROM Orders WHERE customer_id = ?");
-        $orderIdStmt->bind_param("i", $customerId);
-        $orderIdStmt->execute();
-        $orderIdResult = $orderIdStmt->get_result();
-        $orderIdRow = $orderIdResult->fetch_assoc();
-        $orderId = ($orderIdRow['max_id'] === null) ? 1 : $orderIdRow['max_id'] + 1;
-        $orderIdStmt->close();
-        
         // Generate tracking number (CS- followed by 8 random characters)
         $trackingNum = 'CS-' . substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8);
         
@@ -101,10 +92,10 @@ function handleCreateOrder($data) {
         // Set delivery date to current date/time
         $deliveryDate = date('Y-m-d H:i:s');
         
-        // Insert order
-        $orderStmt = $conn->prepare("INSERT INTO Orders (customer_id, order_id, tracking_num, destination_latitude, destination_longitude, state, delivery_date) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $orderStmt->bind_param("iisddss", $customerId, $orderId, $trackingNum, $destinationLatitude, $destinationLongitude, $state, $deliveryDate);
+        // Insert order - let the database auto-increment the order_id
+        $orderStmt = $conn->prepare("INSERT INTO Orders (customer_id, tracking_num, destination_latitude, destination_longitude, state, delivery_date) 
+                                    VALUES (?, ?, ?, ?, ?, ?)");
+        $orderStmt->bind_param("isddss", $customerId, $trackingNum, $destinationLatitude, $destinationLongitude, $state, $deliveryDate);
         
         if (!$orderStmt->execute()) {
             $orderStmt->close();
@@ -112,6 +103,9 @@ function handleCreateOrder($data) {
             apiResponse(false, null, 'Failed to create order: ' . $orderStmt->error);
             exit;
         }
+        
+        // Get the auto-generated order_id
+        $orderId = $conn->insert_id;
         $orderStmt->close();
         
         // Verify all products exist before adding them to the order

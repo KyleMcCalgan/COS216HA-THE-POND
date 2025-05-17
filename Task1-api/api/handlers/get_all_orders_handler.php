@@ -4,7 +4,7 @@
  * 
  * Your Name, Surname, Student Number
  * 
- * This handler returns orders that are in the "Storage" state.
+ * This handler returns orders based on the user's role.
  * When a courier uses this endpoint, they get all orders.
  * When a customer uses it, they only get their own orders.
  */
@@ -53,7 +53,7 @@ function handleGetAllOrders($data) {
         
         // Build the SQL query based on user type
         if ($userType === 'Courier') {
-            // Couriers can see all orders in "Storage" state
+            // Couriers can see all orders
             $sql = "SELECT * FROM Orders";
             $stmt = $conn->prepare($sql);
         } else if ($userType === 'Customer') {

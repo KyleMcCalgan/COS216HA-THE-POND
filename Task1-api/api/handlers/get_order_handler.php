@@ -4,7 +4,7 @@
  * 
  * Your Name, Surname, Student Number
  * 
- * This handler returns a single order by customer_id and order_id.
+ * This handler returns a single order by order_id.
  */
 
 /**
@@ -12,21 +12,31 @@
  */
 function handleGetOrder($data) {
     // Check if required fields are provided
-    if (!isset($data['customer_id']) || !isset($data['order_id'])) {
-        apiResponse(false, null, 'Customer ID and Order ID are required.');
+    if (!isset($data['order_id'])) {
+        apiResponse(false, null, 'Order ID is required.');
         exit;
     }
     
-    $customerId = intval($data['customer_id']);
     $orderId = intval($data['order_id']);
+    $customerId = isset($data['customer_id']) ? intval($data['customer_id']) : null;
     
     try {
         // Get database connection
         $conn = getDbConnection();
         
-        // Get order
-        $orderStmt = $conn->prepare("SELECT * FROM Orders WHERE customer_id = ? AND order_id = ?");
-        $orderStmt->bind_param("ii", $customerId, $orderId);
+        // Get order - If customer_id is provided, include it as a filter
+        $sql = "SELECT * FROM Orders WHERE order_id = ?";
+        $params = [$orderId];
+        $types = "i";
+        
+        if ($customerId !== null) {
+            $sql .= " AND customer_id = ?";
+            $params[] = $customerId;
+            $types .= "i";
+        }
+        
+        $orderStmt = $conn->prepare($sql);
+        $orderStmt->bind_param($types, ...$params);
         $orderStmt->execute();
         $orderResult = $orderStmt->get_result();
         
@@ -61,14 +71,14 @@ function handleGetOrder($data) {
         
         // Get customer info
         $customerStmt = $conn->prepare("SELECT username, email FROM Users WHERE id = ?");
-        $customerStmt->bind_param("i", $customerId);
+        $customerStmt->bind_param("i", $order['customer_id']);
         $customerStmt->execute();
         $customerResult = $customerStmt->get_result();
         
         if ($customerResult->num_rows > 0) {
             $customer = $customerResult->fetch_assoc();
             $order['customer'] = [
-                'id' => $customerId,
+                'id' => $order['customer_id'],
                 'username' => $customer['username'],
                 'email' => $customer['email']
             ];

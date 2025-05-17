@@ -11,14 +11,14 @@
  * Handle update order request
  */
 function handleUpdateOrder($data) {
-    // Check if required fields are provided
-    if (!isset($data['customer_id']) || !isset($data['order_id'])) {
-        apiResponse(false, null, 'Customer ID and Order ID are required.');
+    // Check if required field is provided
+    if (!isset($data['order_id'])) {
+        apiResponse(false, null, 'Order ID is required.');
         exit;
     }
     
-    $customerId = intval($data['customer_id']);
     $orderId = intval($data['order_id']);
+    $customerId = isset($data['customer_id']) ? intval($data['customer_id']) : null;
     
     // Check if at least one field to update is provided
     if (!isset($data['destination_latitude']) && 
@@ -80,29 +80,19 @@ function handleUpdateOrder($data) {
         // Get database connection
         $conn = getDbConnection();
         
-        // Check if order exists
-        $checkStmt = $conn->prepare("SELECT customer_id, order_id FROM Orders WHERE customer_id = ? AND order_id = ?");
-        $checkStmt->bind_param("ii", $customerId, $orderId);
-        $checkStmt->execute();
-        
-        if ($checkStmt->get_result()->num_rows === 0) {
-            $checkStmt->close();
-            $conn->close();
-            apiResponse(false, null, 'Order not found.');
-            exit;
-        }
-        
-        $checkStmt->close();
-        
-        // Build the SQL query
-        $sql = "UPDATE Orders SET " . implode(", ", $updateFields) . " WHERE customer_id = ? AND order_id = ?";
-        
-        // Add customer_id and order_id to bind parameters
-        $bindTypes .= "ii";
-        $bindParams[] = $customerId;
+        // Build the SQL query with WHERE clause
+        $sql = "UPDATE Orders SET " . implode(", ", $updateFields) . " WHERE order_id = ?";
+        $bindTypes .= "i";
         $bindParams[] = $orderId;
         
-        // Prepare and execute the statement
+        // Add customer_id filter if provided
+        if ($customerId !== null) {
+            $sql .= " AND customer_id = ?";
+            $bindTypes .= "i";
+            $bindParams[] = $customerId;
+        }
+        
+        // Prepare statement
         $stmt = $conn->prepare($sql);
         
         // Create reference array for bind_param
@@ -122,8 +112,8 @@ function handleUpdateOrder($data) {
                 // Fetch the updated order data
                 $stmt->close();
                 
-                $fetchStmt = $conn->prepare("SELECT * FROM Orders WHERE customer_id = ? AND order_id = ?");
-                $fetchStmt->bind_param("ii", $customerId, $orderId);
+                $fetchStmt = $conn->prepare("SELECT * FROM Orders WHERE order_id = ?");
+                $fetchStmt->bind_param("i", $orderId);
                 $fetchStmt->execute();
                 $result = $fetchStmt->get_result();
                 
@@ -155,9 +145,9 @@ function handleUpdateOrder($data) {
                     apiResponse(false, null, 'Failed to fetch updated order data.');
                 }
             } else {
-                // No rows were affected (data might be the same)
+                // No rows were affected (data might be the same or order not found)
                 $stmt->close();
-                apiResponse(true, null, 'No changes were made. The data may be the same as existing values.');
+                apiResponse(true, null, 'No changes were made. The data may be the same as existing values or the order was not found.');
             }
         } else {
             $stmt->close();
