@@ -271,7 +271,47 @@ export class DispatchedOrders implements OnInit {
       console.error('Cannot track order: No order ID provided');
       return;
     }
-    this.router.navigate(['/operator/track', orderId]);
+    
+    // Find the order in our filtered orders
+    const order = this.filteredOrders.find(o => o.orderIdStr === orderId);
+    
+    // If this is a waiting drone (START button was clicked), update the drone status first
+    if (order && order.droneStatus === 'waiting') {
+      this.updateDroneStatus(order.droneId, false).then(() => {
+        this.router.navigate(['/operator/track', orderId]);
+      }).catch(error => {
+        console.error('Error updating drone status:', error);
+        // Navigate anyway, even if there was an error
+        this.router.navigate(['/operator/track', orderId]);
+      });
+    } else {
+      // For regular "Track Order" button (already delivering), just navigate
+      this.router.navigate(['/operator/track', orderId]);
+    }
+  }
+  
+  // Update drone status (available/not available)
+  private updateDroneStatus(droneId: number, isAvailable: boolean): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.apiService.callApi('updateDrone', {
+        id: droneId,
+        is_available: isAvailable
+      }).subscribe({
+        next: (response: any) => {
+          if (response.success) {
+            console.log(`Drone ${droneId} status updated successfully to is_available=${isAvailable}`);
+            resolve();
+          } else {
+            console.error('Failed to update drone status:', response.message);
+            reject(response.message);
+          }
+        },
+        error: (err) => {
+          console.error('Error updating drone status:', err);
+          reject(err);
+        }
+      });
+    });
   }
 
   // Go back to operator dashboard
