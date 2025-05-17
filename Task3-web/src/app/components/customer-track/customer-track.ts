@@ -25,11 +25,11 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
   
   // Tracking steps for the timeline
   trackingSteps = [
-    { name: 'Order Placed', completed: false, timestamp: null },
-    { name: 'Processing', completed: false, timestamp: null },
-    { name: 'Dispatched', completed: false, timestamp: null },
-    { name: 'Out for Delivery', completed: false, timestamp: null },
-    { name: 'Delivered', completed: false, timestamp: null }
+    { name: 'Order Placed', completed: false, timestamp: null as string | null },
+    { name: 'Processing', completed: false, timestamp: null as string | null },
+    { name: 'Dispatched', completed: false, timestamp: null as string | null },
+    { name: 'Out for Delivery', completed: false, timestamp: null as string | null },
+    { name: 'Delivered', completed: false, timestamp: null as string | null }
   ];
 
   // Location coordinates
@@ -188,7 +188,7 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
       this.trackingSteps[1].timestamp = this.orderDetails.processing_time || new Date().toISOString();
       this.trackingSteps[2].timestamp = this.orderDetails.dispatch_time || new Date().toISOString();
       this.trackingSteps[3].timestamp = this.orderDetails.shipping_time || new Date().toISOString();
-      this.trackingSteps[4].timestamp = this.orderDetails.delivery_time || this.orderDetails.updated_at || new Date().toISOString();
+      this.trackingSteps[4].timestamp = new Date().toISOString();
     }
   }
 
