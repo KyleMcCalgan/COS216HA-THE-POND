@@ -70,7 +70,7 @@ h3 {
   min-width: 120px;
 }
 
-.status {
+.status-badge {
   background-color: #FFE0B2;
   color: #E65100;
   padding: 3px 8px;
@@ -145,6 +145,12 @@ h3 {
 .drone-count-waiting {
   color: #FF9800;
   border-left: 3px solid #FF9800;
+}
+
+/* New style for returning drones */
+.drone-count-returning {
+  color: #9C27B0;
+  border-left: 3px solid #9C27B0;
 }
 
 .drone-count-total {

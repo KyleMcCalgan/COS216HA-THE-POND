@@ -29,6 +29,7 @@ export class Operator implements OnInit, OnDestroy {
   allDrones: Drone[] = [];
   dronesCurrentlyDelivering: Drone[] = [];
   dronesWaitingToDeliver: Drone[] = [];
+  dronesReturningToBase: Drone[] = []; // New array for returning drones
   loading = true;
   error = '';
   private wsSubscription: Subscription | null = null;
@@ -187,8 +188,9 @@ export class Operator implements OnInit, OnDestroy {
     // Reset arrays
     this.dronesCurrentlyDelivering = [];
     this.dronesWaitingToDeliver = [];
+    this.dronesReturningToBase = [];
     
-    // For each drone, categorize based on business rules
+    // For each drone, categorize based on extended business rules
     this.allDrones.forEach(drone => {
       // Handle field capitalization differences (order_id vs Order_ID)
       const orderID = drone.order_id || drone.Order_ID;
@@ -201,10 +203,16 @@ export class Operator implements OnInit, OnDestroy {
       else if (drone.isAvailable && orderID) {
         this.dronesWaitingToDeliver.push(drone);
       }
+      // RETURNING_TO_BASE: is_available = false and order_id is null
+      // This captures drones that have delivered their package and are returning to base
+      else if (!drone.isAvailable && !orderID) {
+        this.dronesReturningToBase.push(drone);
+      }
     });
     
     console.log('Drones currently delivering:', this.dronesCurrentlyDelivering.length);
     console.log('Drones waiting to deliver:', this.dronesWaitingToDeliver.length);
+    console.log('Drones returning to base:', this.dronesReturningToBase.length);
   }
 
   // Handle WebSocket messages
@@ -257,5 +265,12 @@ export class Operator implements OnInit, OnDestroy {
   refreshData() {
     this.fetchOutstandingOrders();
     this.fetchDrones();
+  }
+
+  // Get total active drones count
+  getTotalActiveDrones(): number {
+    return this.dronesCurrentlyDelivering.length + 
+           this.dronesWaitingToDeliver.length + 
+           this.dronesReturningToBase.length;
   }
 }

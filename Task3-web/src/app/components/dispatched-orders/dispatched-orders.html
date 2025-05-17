@@ -20,7 +20,7 @@
   </div>
   
   <!-- Stats box - shows only when data is loaded -->
-  <div *ngIf="!loading && !error && (waitingOrders.length > 0 || deliveringOrders.length > 0)" class="stats-box">
+  <div *ngIf="!loading && !error && (waitingOrders.length > 0 || deliveringOrders.length > 0 || returningDrones.length > 0)" class="stats-box">
     <div class="stat-item">
       <span class="stat-value waiting">{{ waitingOrders.length }}</span>
       <span class="stat-label">Waiting</span>
@@ -30,19 +30,23 @@
       <span class="stat-label">Delivering</span>
     </div>
     <div class="stat-item">
-      <span class="stat-value total">{{ waitingOrders.length + deliveringOrders.length }}</span>
+      <span class="stat-value returning">{{ returningDrones.length }}</span>
+      <span class="stat-label">Returning</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value total">{{ waitingOrders.length + deliveringOrders.length + returningDrones.length }}</span>
       <span class="stat-label">Total</span>
     </div>
   </div>
   
   <!-- Filter buttons - shows only when data is loaded -->
-  <div *ngIf="!loading && !error && (waitingOrders.length > 0 || deliveringOrders.length > 0)" class="orders-header">
+  <div *ngIf="!loading && !error && (waitingOrders.length > 0 || deliveringOrders.length > 0 || returningDrones.length > 0)" class="orders-header">
     <div class="filter-buttons">
       <button 
         class="filter-button filter-all" 
         [class.active]="currentFilter === 'all'"
         (click)="filterOrders('all')">
-        All Orders ({{ waitingOrders.length + deliveringOrders.length }})
+        All Orders ({{ waitingOrders.length + deliveringOrders.length + returningDrones.length }})
       </button>
       <button 
         class="filter-button filter-waiting" 
@@ -56,11 +60,18 @@
         (click)="filterOrders('delivering')">
         Delivering ({{ deliveringOrders.length }})
       </button>
+      <!-- New filter button for returning drones -->
+      <button 
+        class="filter-button filter-returning" 
+        [class.active]="currentFilter === 'returning'"
+        (click)="filterOrders('returning')">
+        Returning ({{ returningDrones.length }})
+      </button>
     </div>
   </div>
   
   <!-- Empty state -->
-  <div *ngIf="!loading && !error && waitingOrders.length === 0 && deliveringOrders.length === 0" class="empty-state">
+  <div *ngIf="!loading && !error && waitingOrders.length === 0 && deliveringOrders.length === 0 && returningDrones.length === 0" class="empty-state">
     <p>No orders are currently assigned to drones.</p>
     <p class="info-text">Orders will appear here when they are assigned to a drone.</p>
   </div>
@@ -71,43 +82,65 @@
       class="order-card" 
       *ngFor="let order of filteredOrders"
       [class.waiting]="order.droneStatus === 'waiting'"
-      [class.delivering]="order.droneStatus === 'delivering'">
+      [class.delivering]="order.droneStatus === 'delivering'"
+      [class.returning]="order.droneStatus === 'returning'">
       <div class="order-header">
-        <h3>Order #{{ order.orderId }}</h3>
+        <h3>{{ order.droneStatus === 'returning' ? 'Returning Drone #' + order.droneId : 'Order #' + order.orderId }}</h3>
         <span 
           class="status-badge"
           [class.waiting]="order.droneStatus === 'waiting'"
-          [class.delivering]="order.droneStatus === 'delivering'">
-          {{ order.droneStatus === 'waiting' ? 'Waiting to Deliver' : 'Currently Delivering' }}
+          [class.delivering]="order.droneStatus === 'delivering'"
+          [class.returning]="order.droneStatus === 'returning'">
+          {{ order.droneStatus === 'waiting' ? 'Waiting to Deliver' : 
+             order.droneStatus === 'delivering' ? 'Currently Delivering' : 
+             'Returning to HQ' }}
         </span>
       </div>
       
       <div class="order-details">
-        <p><strong>Tracking #:</strong> {{ order.trackingNum }}</p>
-        <p><strong>Customer:</strong> {{ order.customer }}</p>
-        <p><strong>Products:</strong> {{ getProductNames(order.products) }}</p>
-        <p><strong>Destination:</strong> {{ order.destination }}</p>
+        <!-- For returning drones, show simplified information -->
+        <ng-container *ngIf="order.droneStatus === 'returning'">
+          <p><strong>Status:</strong> {{ order.status }}</p>
+          <p><strong>Destination:</strong> {{ order.destination }}</p>
+        </ng-container>
+        
+        <!-- For regular orders, show full information -->
+        <ng-container *ngIf="order.droneStatus !== 'returning'">
+          <p><strong>Tracking #:</strong> {{ order.trackingNum }}</p>
+          <p><strong>Customer:</strong> {{ order.customer }}</p>
+          <p><strong>Products:</strong> {{ getProductNames(order.products) }}</p>
+          <p><strong>Destination:</strong> {{ order.destination }}</p>
+        </ng-container>
         
         <!-- Drone badge with status -->
         <div 
           class="drone-badge"
           [class.waiting]="order.droneStatus === 'waiting'"
-          [class.delivering]="order.droneStatus === 'delivering'">
+          [class.delivering]="order.droneStatus === 'delivering'"
+          [class.returning]="order.droneStatus === 'returning'">
           <span>Drone #{{ order.droneId }}</span>
           <span 
             class="drone-status"
             [class.waiting]="order.droneStatus === 'waiting'"
-            [class.delivering]="order.droneStatus === 'delivering'">
-            {{ order.droneStatus === 'waiting' ? 'WAITING' : 'IN FLIGHT' }}
+            [class.delivering]="order.droneStatus === 'delivering'"
+            [class.returning]="order.droneStatus === 'returning'">
+            {{ order.droneStatus === 'waiting' ? 'WAITING' : 
+               order.droneStatus === 'delivering' ? 'IN FLIGHT' : 
+               'RETURNING' }}
           </span>
         </div>
       </div>
       
       <div class="order-actions">
         <button 
-          [ngClass]="{'track-btn': order.droneStatus === 'delivering', 'start-btn': order.droneStatus === 'waiting'}" 
+          [ngClass]="{
+            'track-btn': order.droneStatus === 'delivering' || order.droneStatus === 'returning', 
+            'start-btn': order.droneStatus === 'waiting'
+          }" 
           (click)="trackOrder(order.orderIdStr)">
-          {{ order.droneStatus === 'waiting' ? 'START' : 'Track Order' }}
+          {{ order.droneStatus === 'waiting' ? 'START' : 
+             order.droneStatus === 'returning' ? 'Control Drone' : 
+             'Track Order' }}
         </button>
       </div>
     </div>

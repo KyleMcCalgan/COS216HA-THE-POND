@@ -42,15 +42,15 @@
 
   <!-- Dashboard Bottom Sections -->
   <div class="bottom-sections">
-    <!-- Operate Drones Section (Updated from "Dispatched Drones") -->
+    <!-- Operate Drones Section -->
     <div class="section operate-drones-section">
       <h3>Operate Drones</h3>
       
-      <div *ngIf="dronesCurrentlyDelivering.length === 0 && dronesWaitingToDeliver.length === 0" class="empty-state-mini">
+      <div *ngIf="getTotalActiveDrones() === 0" class="empty-state-mini">
         <p>No drones currently in operation</p>
       </div>
       
-      <div *ngIf="dronesCurrentlyDelivering.length > 0 || dronesWaitingToDeliver.length > 0" class="drone-counts">
+      <div *ngIf="getTotalActiveDrones() > 0" class="drone-counts">
         <div class="drone-count-item drone-count-delivering">
           <span>Currently Delivering:</span>
           <span>{{ dronesCurrentlyDelivering.length }}</span>
@@ -59,9 +59,14 @@
           <span>Waiting to Deliver:</span>
           <span>{{ dronesWaitingToDeliver.length }}</span>
         </div>
+        <!-- New section for returning drones -->
+        <div class="drone-count-item drone-count-returning">
+          <span>Returning to Base:</span>
+          <span>{{ dronesReturningToBase.length }}</span>
+        </div>
         <div class="drone-count-item drone-count-total">
           <span>Total Active Drones:</span>
-          <span>{{ dronesCurrentlyDelivering.length + dronesWaitingToDeliver.length }}</span>
+          <span>{{ getTotalActiveDrones() }}</span>
         </div>
       </div>
       

@@ -25,7 +25,7 @@ interface Order {
   customerId: number;
   trackingNum: string;
   droneId: number;
-  droneStatus: 'waiting' | 'delivering'; // Added to track drone status
+  droneStatus: 'waiting' | 'delivering' | 'returning'; // Added 'returning' state
 }
 
 @Component({
@@ -39,13 +39,13 @@ export class DispatchedOrders implements OnInit {
   // Arrays for different order states
   waitingOrders: Order[] = [];
   deliveringOrders: Order[] = [];
+  returningDrones: Order[] = []; // New array for returning drones with last order info
   filteredOrders: Order[] = []; // Orders displayed based on current filter
-  returningDrones: Drone[] = []; // New array for returning drones
   
   // UI state
   loading = true;
   error = '';
-  currentFilter = 'all'; // 'all', 'waiting', 'delivering'
+  currentFilter = 'all'; // 'all', 'waiting', 'delivering', 'returning'
   
   // Store drone and order info
   allDrones: Drone[] = [];
@@ -149,7 +149,7 @@ export class DispatchedOrders implements OnInit {
     // Reset arrays
     this.waitingOrders = [];
     this.deliveringOrders = [];
-    this.returningDrones = []; // Reset returning drones array
+    this.returningDrones = [];
     
     // Debug logs
     console.log(`Processing ${this.allDrones.length} drones and ${this.allOrders.length} orders`);
@@ -160,7 +160,7 @@ export class DispatchedOrders implements OnInit {
       console.log(`Drone ${drone.id}: isAvailable=${drone.isAvailable}, order_id=${orderId}`);
     });
     
-    // Process each order
+    // First handle drones with assigned orders
     this.allOrders.forEach(order => {
       try {
         // Find if this order is assigned to any drone
@@ -177,50 +177,9 @@ export class DispatchedOrders implements OnInit {
         
         console.log(`Order ${order.order_id} is assigned to drone ${assignedDrone.id} (isAvailable: ${assignedDrone.isAvailable})`);
         
-        // Format products list
-        let productsList: string[] = [];
-        if (order.products && Array.isArray(order.products)) {
-          productsList = order.products.map((p: any) => {
-            if (p.title) {
-              return `${p.title} (${p.quantity || 1}x)`;
-            } else if (p.name) {
-              return `${p.name} (${p.quantity || 1}x)`;
-            } else {
-              return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
-            }
-          });
-        } else {
-          productsList = ['No products'];
-        }
-
-        // Format coordinates
-        let lat = order.destination_latitude;
-        let lng = order.destination_longitude;
-        let formattedAddress = `${lat}, ${lng}`;
-        
-        try {
-          // Try to format with 4 decimal places if possible
-          if (typeof lat === 'number') lat = lat.toFixed(4);
-          if (typeof lng === 'number') lng = lng.toFixed(4);
-          formattedAddress = `${lat}, ${lng}`;
-        } catch (e) {
-          console.warn('Could not format coordinates:', e);
-        }
-        
-        // Create processed order object
-        const processedOrder: Order = {
-          orderId: order.order_id,
-          orderIdStr: String(order.order_id), // For routing
-          products: productsList,
-          status: order.state,
-          destination: formattedAddress,
-          customer: order.customer?.username || `Customer #${order.customer_id}`,
-          customerId: order.customer_id,
-          trackingNum: order.tracking_num || 'Unknown',
-          droneId: assignedDrone.id,
-          // Categorize based on drone status - using our business logic from the server
-          droneStatus: assignedDrone.isAvailable ? 'waiting' : 'delivering'
-        };
+        // Create processed order with formatted data
+        const processedOrder = this.createProcessedOrder(order, assignedDrone.id, 
+          assignedDrone.isAvailable ? 'waiting' : 'delivering');
         
         // Add to appropriate category
         if (processedOrder.droneStatus === 'waiting') {
@@ -233,16 +192,80 @@ export class DispatchedOrders implements OnInit {
       }
     });
     
-    // Process drones that are in the RETURNING state (not available and no order ID)
-    this.allDrones.forEach(drone => {
+    // Now handle drones that are in the RETURNING state (not available and no order ID)
+    const returningDrones = this.allDrones.filter(drone => {
       const droneOrderId = drone.order_id || drone.Order_ID;
-      if (!drone.isAvailable && !droneOrderId) {
-        this.returningDrones.push(drone);
-      }
+      return !drone.isAvailable && !droneOrderId;
     });
     
-    console.log(`Processed ${this.waitingOrders.length} waiting orders and ${this.deliveringOrders.length} delivering orders`);
-    console.log(`Found ${this.returningDrones.length} drones returning to base`);
+    console.log(`Found ${returningDrones.length} drones returning to base`);
+    
+    // For returning drones, create entries with their current location
+    returningDrones.forEach(drone => {
+      // Create a processed order object for returning drone with minimal info
+      const returningDroneOrder: Order = {
+        orderId: 0, // No real order ID
+        orderIdStr: `drone-${drone.id}`, // Use drone ID as identifier for routing
+        products: ["Package delivered"],
+        status: "Returning to HQ",
+        destination: "Headquarters",
+        customer: "N/A - Returning",
+        customerId: 0,
+        trackingNum: `RTN-${drone.id}`,
+        droneId: drone.id,
+        droneStatus: 'returning'
+      };
+      
+      this.returningDrones.push(returningDroneOrder);
+    });
+    
+    console.log(`Processed ${this.waitingOrders.length} waiting orders, ${this.deliveringOrders.length} delivering orders, and ${this.returningDrones.length} returning drones`);
+  }
+
+  // Create a processed order object with all needed fields
+  private createProcessedOrder(order: any, droneId: number, status: 'waiting' | 'delivering' | 'returning'): Order {
+    // Format products list
+    let productsList: string[] = [];
+    if (order.products && Array.isArray(order.products)) {
+      productsList = order.products.map((p: any) => {
+        if (p.title) {
+          return `${p.title} (${p.quantity || 1}x)`;
+        } else if (p.name) {
+          return `${p.name} (${p.quantity || 1}x)`;
+        } else {
+          return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
+        }
+      });
+    } else {
+      productsList = ['No products'];
+    }
+
+    // Format coordinates
+    let lat = order.destination_latitude;
+    let lng = order.destination_longitude;
+    let formattedAddress = `${lat}, ${lng}`;
+    
+    try {
+      // Try to format with 4 decimal places if possible
+      if (typeof lat === 'number') lat = lat.toFixed(4);
+      if (typeof lng === 'number') lng = lng.toFixed(4);
+      formattedAddress = `${lat}, ${lng}`;
+    } catch (e) {
+      console.warn('Could not format coordinates:', e);
+    }
+    
+    return {
+      orderId: order.order_id,
+      orderIdStr: String(order.order_id), // For routing
+      products: productsList,
+      status: order.state,
+      destination: formattedAddress,
+      customer: order.customer?.username || `Customer #${order.customer_id}`,
+      customerId: order.customer_id,
+      trackingNum: order.tracking_num || 'Unknown',
+      droneId: droneId,
+      droneStatus: status
+    };
   }
 
   // Apply filter to orders
@@ -256,10 +279,17 @@ export class DispatchedOrders implements OnInit {
       case 'delivering':
         this.filteredOrders = [...this.deliveringOrders];
         break;
+      case 'returning':
+        this.filteredOrders = [...this.returningDrones];
+        break;
       case 'all':
       default:
-        // Combine both lists
-        this.filteredOrders = [...this.waitingOrders, ...this.deliveringOrders];
+        // Combine all lists
+        this.filteredOrders = [
+          ...this.waitingOrders, 
+          ...this.deliveringOrders,
+          ...this.returningDrones
+        ];
         break;
     }
   }
@@ -269,6 +299,26 @@ export class DispatchedOrders implements OnInit {
     console.log('Tracking order:', orderId);
     if (!orderId) {
       console.error('Cannot track order: No order ID provided');
+      return;
+    }
+    
+    // Check if this is a returning drone (will start with 'drone-')
+    if (orderId.startsWith('drone-')) {
+      const droneId = orderId.split('-')[1];
+      console.log(`This is a returning drone (ID: ${droneId}). Finding last order...`);
+      
+      // For returning drones, we need to find a delivered order to track
+      // This is a simplification - in a real app, you'd want to track the most recent order
+      const deliveredOrders = this.allOrders.filter(order => order.state === 'Delivered');
+      let orderToTrack = orderId; // Default to drone ID if no order found
+      
+      if (deliveredOrders.length > 0) {
+        // Just use the first delivered order (in real app, find the actual last order)
+        orderToTrack = String(deliveredOrders[0].order_id);
+        console.log(`Using order ID ${orderToTrack} for returning drone tracking`);
+      }
+      
+      this.router.navigate(['/operator/track', orderToTrack]);
       return;
     }
     
@@ -285,7 +335,7 @@ export class DispatchedOrders implements OnInit {
         this.router.navigate(['/operator/track', orderId]);
       });
     } else {
-      // For regular "Track Order" button (already delivering), just navigate
+      // For regular "Track Order" button (already delivering or returning), just navigate
       this.router.navigate(['/operator/track', orderId]);
     }
   }
