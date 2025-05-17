@@ -4,11 +4,54 @@
     <h2>Track Order {{ orderId }}</h2>
   </div>
   
+  <!-- State bar to show current status -->
+  <div *ngIf="droneDetails" class="state-bar" 
+       [ngClass]="{'state-delivering': droneState === 'delivering', 
+                  'state-returning': droneState === 'returning', 
+                  'state-delivered': droneState === 'delivered',
+                  'state-completed': droneState === 'completed'}">
+    <div class="state-bar-content">
+      <span class="state-label">{{ getStateLabelText() }}</span>
+      <span class="state-message">{{ getStateMessageText() }}</span>
+    </div>
+  </div>
+  
   <!-- Main content section -->
   <div *ngIf="orderDetails; else noOrder" class="track-content">
     <div class="content-grid">
       <!-- Left panel with order details -->
       <div class="details-panel">
+        <!-- Drone status card -->
+        <div class="drone-status-card" *ngIf="droneDetails">
+          <h3>Drone Status</h3>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Status:</span>
+              <span class="info-value">
+                <span class="state-badge" [ngClass]="'state-' + droneState">{{ getStateLabelText() }}</span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Battery:</span>
+              <span class="info-value">
+                <div class="battery-indicator">
+                  <span [style.width.%]="droneDetails.battery_level" class="battery-level"></span>
+                  {{ droneDetails.battery_level }}%
+                </div>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Altitude:</span>
+              <span class="info-value">{{ droneDetails.altitude }} meters</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">ETA:</span>
+              <span class="info-value">{{ getEstimatedTimeText() }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Order info card -->
         <div class="order-info-card">
           <h3>Order Information</h3>
           <div class="info-list">
@@ -34,6 +77,8 @@
             </div>
           </div>
         </div>
+        
+        <!-- Navigation actions -->
         <div class="navigation-actions">
           <button (click)="returnToDispatched()" class="return-btn">Return to Drone Orders</button>
         </div>

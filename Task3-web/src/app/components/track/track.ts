@@ -31,6 +31,9 @@ interface DroneDetails {
   order_id: number | null;
 }
 
+// Define drone state types
+type DroneState = 'waiting' | 'delivering' | 'returning' | 'delivered' | 'completed';
+
 @Component({
   selector: 'app-track',
   standalone: true,
@@ -45,12 +48,14 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   orderId: string | null = null;
   orderDetails: OrderDetails | null = null;
   droneDetails: DroneDetails | null = null;
+  droneState: DroneState = 'delivering'; // Default state
   private map: L.Map | null = null;
   private droneMarker: L.Marker | null = null;
   private destinationMarker: L.Marker | null = null;
   private isLoading: boolean = true;
   private keyboardEnabled: boolean = false;
   private mapInitialized: boolean = false;
+  private updateInterval: any = null;
 
   // Location coordinates
   //---------------------------------------------------
@@ -68,7 +73,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   private droneCoordinates: L.LatLngExpression = [this.HQlat, this.HQlng];
 
   // Movement increment for WASD keys
-  private readonly MOVEMENT_INCREMENT: number = 0.001;
+  private readonly MOVEMENT_INCREMENT: number = 0.0005;
 
   //---------------------------------------------------
   // CONSTRUCTOR & LIFECYCLE HOOKS
@@ -93,6 +98,11 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
 
     console.log(`Fetching data for order ID: ${this.orderId}`);
     this.loadOrderAndDroneData();
+    
+    // Set up automatic refreshing
+    this.updateInterval = setInterval(() => {
+      this.fetchDroneData();
+    }, 10000); // Refresh drone data every 10 seconds
   }
 
   /**
@@ -191,6 +201,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
             return droneOrderId == this.orderId;
           });
           
+          // If we found a drone assigned to this order
           if (foundDrone) {
             console.log('Found drone for this order:', foundDrone);
             this.droneDetails = {
@@ -209,16 +220,63 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
               this.orderDetails.droneId = this.droneDetails.id;
             }
             
+            // Determine if drone is delivering or returning
+            this.determineDroneState();
+            
             // Update drone coordinates
             this.updateDroneCoordinates();
             
             // Update or initialize the map with drone marker
             this.updateMapWithDronePosition();
             
-            // Enable keyboard controls
-            this.keyboardEnabled = true;
-          } else {
-            console.error('No drone found for this order');
+            // Enable keyboard controls if the drone is not returning, delivered, or completed
+            this.keyboardEnabled = this.droneState === 'delivering';
+          } 
+          // If we didn't find a drone assigned to this order, check if any drone is returning
+          else {
+            // Get all drones that are not available, with no order ID (returning drones)
+            const returningDrones = dronesResponse.data.filter((drone: any) => {
+              const droneOrderId = drone.order_id || drone.Order_ID;
+              return !drone.is_available && !droneOrderId;
+            });
+            
+            console.log('Returning drones:', returningDrones);
+            
+            // If we have any returning drones, assume it's for this order
+            // This is a simplification - in a real system we'd track which order a returning drone completed
+            if (returningDrones.length > 0) {
+              const returningDrone = returningDrones[0];
+              
+              this.droneDetails = {
+                id: parseInt(returningDrone.id),
+                is_available: returningDrone.is_available === true,
+                latest_latitude: parseFloat(returningDrone.latest_latitude) || 0,
+                latest_longitude: parseFloat(returningDrone.latest_longitude) || 0,
+                altitude: parseFloat(returningDrone.altitude) || 0,
+                battery_level: parseInt(returningDrone.battery_level) || 0,
+                current_operator_id: returningDrone.current_operator_id,
+                order_id: null
+              };
+              
+              // Update order details with drone ID
+              if (this.orderDetails) {
+                this.orderDetails.droneId = this.droneDetails.id;
+              }
+              
+              // Set state to returning
+              this.droneState = 'returning';
+              
+              // Update drone coordinates
+              this.updateDroneCoordinates();
+              
+              // Update or initialize the map with drone marker
+              this.updateMapWithDronePosition();
+              
+              // Enable keyboard controls for returning drone so user can pilot it back to HQ
+              this.keyboardEnabled = true;
+            } else {
+              console.error('No drone found for this order, and no returning drones');
+            }
           }
         } else {
           console.error('Failed to load drones:', dronesResponse.message);
@@ -229,6 +287,138 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
         console.error('Error loading drones:', err);
       }
     });
+  }
+
+  private determineDroneState() {
+    if (!this.droneDetails || !this.orderDetails) return;
+    
+    const isDroneAssignedToOrder = this.droneDetails.order_id != null;
+    const isDroneAvailable = this.droneDetails.is_available;
+    
+    // Check if the drone is at the destination
+    const isAtDestination = this.isAtDestination(
+      this.droneDetails.latest_latitude, 
+      this.droneDetails.latest_longitude,
+      this.orderDetails.destination.latitude,
+      this.orderDetails.destination.longitude
+    );
+    
+    // Check if the drone is at HQ
+    const isAtHQ = this.isAtHQ(
+      this.droneDetails.latest_latitude, 
+      this.droneDetails.latest_longitude
+    );
+    
+    console.log(`State determination: isDroneAssignedToOrder=${isDroneAssignedToOrder}, isDroneAvailable=${isDroneAvailable}, isAtDestination=${isAtDestination}, isAtHQ=${isAtHQ}`);
+    
+    // Determine the state based on multiple factors
+    if (isDroneAssignedToOrder && !isDroneAvailable) {
+      // If drone has an order and is not available, it's delivering
+      this.droneState = 'delivering';
+      this.keyboardEnabled = true; // Enable keyboard for delivery
+    } else if (!isDroneAssignedToOrder && !isDroneAvailable && isAtDestination) {
+      // If drone is at destination, has no order, and is not available, it just completed delivery
+      this.droneState = 'delivered';
+      this.keyboardEnabled = true; // Keep keyboard enabled for return journey
+    } else if (!isDroneAssignedToOrder && !isDroneAvailable && !isAtHQ) {
+      // If drone has no order, is not available, and is not at HQ, it's returning
+      this.droneState = 'returning';
+      this.keyboardEnabled = true; // Keep keyboard enabled for return journey
+    } else if (!isDroneAssignedToOrder && !isDroneAvailable && isAtHQ) {
+      // If drone is at HQ, has no order, and is not available, it has completed its mission
+      this.droneState = 'completed';
+      this.keyboardEnabled = false; // Disable keyboard when completed
+    } else if (isDroneAssignedToOrder && isDroneAvailable) {
+      // If drone has an order but is still available, it's waiting to start delivery
+      this.droneState = 'waiting';
+      this.keyboardEnabled = false; // Not yet started, keyboard disabled
+    } else {
+      // Default to delivering if we can't determine state
+      this.droneState = 'delivering';
+      this.keyboardEnabled = true; // Enable keyboard for default state
+    }
+    
+    console.log(`Drone state determined: ${this.droneState}, keyboard enabled: ${this.keyboardEnabled}`);
+  }
+
+  /**
+   * Check if drone is at the destination (within tolerance)
+   */
+  private isAtDestination(droneLat: number, droneLong: number, destLat: number, destLong: number): boolean {
+    // Use a small tolerance for position comparisons (0.0001 degrees is about 11 meters)
+    const tolerance = 0.0001;
+    return Math.abs(droneLat - destLat) < tolerance && Math.abs(droneLong - destLong) < tolerance;
+  }
+
+  /**
+   * Check if drone is at HQ (within tolerance)
+   */
+  private isAtHQ(droneLat: number, droneLong: number): boolean {
+    // Use a small tolerance for position comparisons
+    const tolerance = 0.0001;
+    return Math.abs(droneLat - this.HQlat) < tolerance && Math.abs(droneLong - this.HQlng) < tolerance;
+  }
+
+  /**
+   * Get the appropriate label text for the current drone state
+   */
+  getStateLabelText(): string {
+    switch (this.droneState) {
+      case 'waiting':
+        return 'WAITING TO START';
+      case 'delivering':
+        return 'DELIVERING';
+      case 'returning':
+        return 'RETURNING TO BASE';
+      case 'delivered':
+        return 'DELIVERED';
+      case 'completed':
+        return 'COMPLETED';
+      default:
+        return 'UNKNOWN';
+    }
+  }
+
+  /**
+   * Get the appropriate message text for the current drone state
+   */
+  getStateMessageText(): string {
+    switch (this.droneState) {
+      case 'waiting':
+        return 'Drone is waiting to start the delivery mission.';
+      case 'delivering':
+        return 'Drone is on its way to the delivery destination.';
+      case 'returning':
+        return 'Drone has completed the delivery and is returning to base.';
+      case 'delivered':
+        return 'Drone has arrived at the delivery destination.';
+      case 'completed':
+        return 'Drone has returned to base and completed the mission.';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get an estimated time text based on drone state
+   */
+  getEstimatedTimeText(): string {
+    // This would be a more complex calculation in a real system
+    // For now, just return a placeholder based on state
+    switch (this.droneState) {
+      case 'waiting':
+        return 'Not yet started';
+      case 'delivering':
+        return 'Approximately 5-10 minutes';
+      case 'returning':
+        return 'Drone has already delivered the package';
+      case 'delivered':
+        return 'Package has been delivered';
+      case 'completed':
+        return 'Mission completed';
+      default:
+        return 'Unknown';
+    }
   }
 
   /**
@@ -274,6 +464,11 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy() {
     // Disable keyboard controls
     this.keyboardEnabled = false;
+    
+    // Clear update interval
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
     
     // Clean up the map if it exists
     if (this.map) {
@@ -494,8 +689,9 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    */
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
-    // Only handle keys if keyboard controls are enabled
-    if (!this.keyboardEnabled || !this.droneDetails) return;
+    // Only handle keys if keyboard controls are enabled and drone is in a movable state (delivering or returning)
+    if (!this.keyboardEnabled || !this.droneDetails || 
+        (this.droneState !== 'delivering' && this.droneState !== 'returning')) return;
     
     let latChange = 0;
     let lngChange = 0;
@@ -554,12 +750,152 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
           
           // Update map marker
           this.updateDronePosition();
+          
+          if (this.droneState === 'delivering' && this.orderDetails) {
+            // Check if drone has reached destination during delivery
+            if (this.isAtDestination(
+              latitude, 
+              longitude, 
+              this.orderDetails.destination.latitude, 
+              this.orderDetails.destination.longitude
+            )) {
+              // Drone has reached destination, show notification and update state
+              this.handleDeliveryCompleted();
+            }
+          } 
+          else if (this.droneState === 'returning') {
+            // Check if drone has reached HQ during return journey
+            if (this.isAtHQ(latitude, longitude)) {
+              // Drone has reached HQ, complete the mission
+              this.handleReturnCompleted();
+            }
+          }
         } else {
           console.error('Failed to update drone position:', response.message);
         }
       },
       error: (err) => {
         console.error('Error updating drone position:', err);
+      }
+    });
+  }
+  
+  /**
+   * Handle when the drone has arrived at the delivery destination
+   */
+  private handleDeliveryCompleted(): void {
+    if (!this.droneDetails || !this.orderDetails) return;
+    
+    // Show popup alert (fulfilling first bullet point)
+    window.alert(`Package delivered successfully to ${this.orderDetails.customer}!`);
+    
+    // Update drone state to delivered
+    this.droneState = 'delivered';
+    
+    // Update drone in database:
+    // 1. Set order_id to null (delivery completed) - fulfilling second bullet point
+    // 2. Keep is_available as false (drone is still in operation, returning to base)
+    this.apiService.callApi('updateDrone', {
+      id: this.droneDetails.id,
+      latest_latitude: this.droneDetails.latest_latitude,
+      latest_longitude: this.droneDetails.latest_longitude,
+      altitude: this.droneDetails.altitude,
+      battery_level: this.droneDetails.battery_level,
+      is_available: false,  // Keep as false since it's still in operation
+      order_id: null  // Remove the order_id as delivery is complete
+    }).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          console.log('Drone updated for return journey:', response.data);
+          
+          // Update local drone details
+          this.droneDetails!.order_id = null;
+          
+          // After a brief delay, update the state to returning
+          setTimeout(() => {
+            this.droneState = 'returning';
+            
+            // Keep keyboard controls enabled for returning drone (fulfilling third bullet point)
+            this.keyboardEnabled = true;
+            
+            // Show message to user about returning to HQ
+            window.alert('Package delivered! Please fly the drone back to headquarters.');
+            
+            // Update UI
+            console.log('Drone state changed to: returning');
+          }, 3000); // 3 second delay to let user see "delivered" state
+          
+        } else {
+          console.error('Failed to update drone for return journey:', response.message);
+        }
+      },
+      error: (err) => {
+        console.error('Error updating drone for return journey:', err);
+      }
+    });
+    
+    // Also update the order status to "Delivered" in the database
+    this.apiService.callApi('updateOrder', {
+      customer_id: this.orderDetails.customerId,
+      order_id: this.orderDetails.orderId,
+      state: 'Delivered'
+    }).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          console.log('Order status updated to Delivered:', response.data);
+        } else {
+          console.error('Failed to update order status:', response.message);
+        }
+      },
+      error: (err) => {
+        console.error('Error updating order status:', err);
+      }
+    });
+  }
+
+  /**
+   * Handle when the drone arrives back at HQ
+   */
+  private handleReturnCompleted(): void {
+    if (!this.droneDetails) return;
+    
+    // Show popup alert when drone reaches HQ (fulfilling fourth bullet point)
+    window.alert('Drone has returned to headquarters successfully!');
+    
+    // Update drone state
+    this.droneState = 'completed';
+    
+    // Disable keyboard controls now that mission is complete (fulfilling sixth bullet point)
+    this.keyboardEnabled = false;
+    
+    // Update drone in database (fulfilling fifth bullet point):
+    // 1. Set altitude to 0
+    // 2. Reset battery to 100%
+    // 3. Set is_available to true (drone is available for new deliveries)
+    this.apiService.callApi('updateDrone', {
+      id: this.droneDetails.id,
+      latest_latitude: this.droneDetails.latest_latitude,
+      latest_longitude: this.droneDetails.latest_longitude,
+      altitude: 0,  // Set altitude to 0 as the drone has landed
+      battery_level: 100,  // Reset battery to 100%
+      is_available: true,  // Make drone available again
+      order_id: null
+    }).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          console.log('Drone marked as returned and available:', response.data);
+          
+          // Update local drone details
+          this.droneDetails!.altitude = 0;
+          this.droneDetails!.battery_level = 100;
+          this.droneDetails!.is_available = true;
+          
+        } else {
+          console.error('Failed to update drone after return:', response.message);
+        }
+      },
+      error: (err) => {
+        console.error('Error updating drone after return:', err);
       }
     });
   }

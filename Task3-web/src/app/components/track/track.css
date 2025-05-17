@@ -236,42 +236,6 @@ h2 {
   background-color: #3E7A3A;
 }
 
-/* Responsive styles */
-@media (max-width: 992px) {
-  .content-grid {
-    flex-direction: column;
-    height: auto;
-  }
-  
-  .map-container {
-    height: 400px;
-  }
-}
-
-@media (max-width: 768px) {
-  .track-header {
-    padding: 1.5rem 1rem;
-  }
-  
-  .track-content {
-    padding: 1rem;
-  }
-  
-  .track-container::before {
-    content: "←";
-    padding: 8px 12px;
-  }
-}
-
-@media (max-width: 576px) {
-  .info-item {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-}
-
-/* Add these styles to your existing track.css file */
-
 /* State bar styles */
 .state-bar {
   width: 100%;
@@ -324,7 +288,7 @@ h2 {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 1.5rem;
-  margin-top: 1rem;
+  margin-top: 0;
   margin-bottom: 1rem;
 }
 
@@ -377,8 +341,32 @@ h2 {
   max-width: 100px;
 }
 
-/* Responsive adjustments for the new elements */
+/* Responsive styles */
+@media (max-width: 992px) {
+  .content-grid {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .map-container {
+    height: 400px;
+  }
+}
+
 @media (max-width: 768px) {
+  .track-header {
+    padding: 1.5rem 1rem;
+  }
+  
+  .track-content {
+    padding: 1rem;
+  }
+  
+  .track-container::before {
+    content: "←";
+    padding: 8px 12px;
+  }
+  
   .state-bar {
     padding: 0.75rem 1rem;
   }
@@ -388,9 +376,11 @@ h2 {
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
-  .drone-status-card {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 576px) {
+  .info-item {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 }
