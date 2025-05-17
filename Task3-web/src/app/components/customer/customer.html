@@ -1,11 +1,21 @@
 <div class="customer-container">
   <h2>Customer Dashboard</h2>
   <h3>Your Orders</h3>
-  <div class="orders-list">
+
+  <div *ngIf="orders.length === 0" class="empty-state">
+    <p>There are currently no orders.</p>
+  </div>
+
+  <div *ngIf="orders.length > 0" class="orders-list">
     <div class="order-card" *ngFor="let order of orders">
-      <p><strong>Order ID:</strong> {{ order.orderId }}</p>
-      <p><strong>Product:</strong> {{ order.product }}</p>
-      <p><strong>Status:</strong> {{ order.status }}</p>
+      <div class="order-info">
+        <p><strong>Order ID:</strong> {{ order.orderId }}</p>
+        <p><strong>Product:</strong> {{ order.product }}</p>
+        <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
+      </div>
+      <div class="track-button">
+        <button [routerLink]="['/track', order.orderId]">Track</button>
+      </div>
     </div>
   </div>
 </div>
