@@ -104,7 +104,11 @@
       </div>
       
       <div class="order-actions">
-        <button (click)="trackOrder(order.orderIdStr)" class="track-btn">Track Order</button>
+        <button 
+          [ngClass]="{'track-btn': order.droneStatus === 'delivering', 'start-btn': order.droneStatus === 'waiting'}" 
+          (click)="trackOrder(order.orderIdStr)">
+          {{ order.droneStatus === 'waiting' ? 'START' : 'Track Order' }}
+        </button>
       </div>
     </div>
   </div>

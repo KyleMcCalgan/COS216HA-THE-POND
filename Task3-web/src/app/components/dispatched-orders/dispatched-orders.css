@@ -232,6 +232,12 @@ h2:after {
   padding: 10px 20px;
   position: relative;
   padding-right: 35px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .track-btn:after {
@@ -243,9 +249,42 @@ h2:after {
 
 .track-btn:hover {
   background-color: #2A0D0E;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .track-btn:hover:after {
+  transform: translateX(5px);
+}
+
+/* New START button styles */
+.start-btn {
+  background-color: #4CAF50;  /* Green color */
+  padding: 10px 20px;
+  position: relative;
+  padding-right: 35px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.start-btn:after {
+  content: '→';
+  position: absolute;
+  right: 15px;
+  transition: transform 0.2s;
+}
+
+.start-btn:hover {
+  background-color: #45a049;  /* Darker green on hover */
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.start-btn:hover:after {
   transform: translateX(5px);
 }
 
@@ -468,7 +507,7 @@ button:hover {
     justify-content: center;
   }
   
-  .track-btn {
+  .track-btn, .start-btn {
     width: 100%;
   }
   

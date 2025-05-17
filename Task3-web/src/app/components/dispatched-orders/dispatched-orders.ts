@@ -40,6 +40,7 @@ export class DispatchedOrders implements OnInit {
   waitingOrders: Order[] = [];
   deliveringOrders: Order[] = [];
   filteredOrders: Order[] = []; // Orders displayed based on current filter
+  returningDrones: Drone[] = []; // New array for returning drones
   
   // UI state
   loading = true;
@@ -148,6 +149,7 @@ export class DispatchedOrders implements OnInit {
     // Reset arrays
     this.waitingOrders = [];
     this.deliveringOrders = [];
+    this.returningDrones = []; // Reset returning drones array
     
     // Debug logs
     console.log(`Processing ${this.allDrones.length} drones and ${this.allOrders.length} orders`);
@@ -231,7 +233,16 @@ export class DispatchedOrders implements OnInit {
       }
     });
     
+    // Process drones that are in the RETURNING state (not available and no order ID)
+    this.allDrones.forEach(drone => {
+      const droneOrderId = drone.order_id || drone.Order_ID;
+      if (!drone.isAvailable && !droneOrderId) {
+        this.returningDrones.push(drone);
+      }
+    });
+    
     console.log(`Processed ${this.waitingOrders.length} waiting orders and ${this.deliveringOrders.length} delivering orders`);
+    console.log(`Found ${this.returningDrones.length} drones returning to base`);
   }
 
   // Apply filter to orders
