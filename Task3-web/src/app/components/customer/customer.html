@@ -14,7 +14,7 @@
         <p><strong>Status:</strong> <span class="status">{{ order.status }}</span></p>
       </div>
       <div class="track-button">
-        <button [routerLink]="['/track', order.orderId]">Track</button>
+        <button (click)="navigateToTrack(order.orderId)">Track</button>
       </div>
     </div>
   </div>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-customer',
@@ -14,7 +15,10 @@ export class Customer implements OnInit {
   loading = true;
   error = '';
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
     this.fetchOrders();
@@ -86,5 +90,9 @@ export class Customer implements OnInit {
     }
     
     console.log('Customer orders processed:', this.orders.length);
+  }
+  
+  navigateToTrack(orderId: string) {
+    this.router.navigate(['/customer/track', orderId]);
   }
 }

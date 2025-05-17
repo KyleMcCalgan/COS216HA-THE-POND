@@ -1,0 +1,33 @@
+
+
+  <div *ngIf="!loading && !error && orderDetails" class="order-tracking">
+    <div class="order-summary">
+      <h3>Order #{{ orderId }}</h3>
+      <p><strong>Date:</strong> {{ orderDetails.created_at | date:'medium' }}</p>
+      <p><strong>Current Status:</strong> <span class="status">{{ orderDetails.state }}</span></p>
+    </div>
+
+    <div class="tracking-timeline">
+      <div *ngFor="let step of trackingSteps; let i = index" class="tracking-step" [ngClass]="{'completed': step.completed}">
+        <div class="tracking-indicator">
+          <div class="step-circle" [ngClass]="{'active': step.completed}"></div>
+          <div *ngIf="i < trackingSteps.length - 1" class="step-line" [ngClass]="{'active': step.completed && trackingSteps[i+1].completed}"></div>
+        </div>
+        <div class="step-details">
+          <div class="step-name">{{ step.name }}</div>
+          <div *ngIf="step.timestamp" class="step-time">{{ step.timestamp | date:'medium' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-details" *ngIf="orderDetails.products && orderDetails.products.length">
+      <h3>Products in this Order</h3>
+      <div *ngFor="let product of orderDetails.products" class="product-item">
+        <p><strong>{{ product.title || product.name || 'Unknown Product' }}</strong> ({{ product.quantity || 1 }}x)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="back-button">
+    <button routerLink="/customer">Back to My Orders</button>
+  </div>

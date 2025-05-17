@@ -1,12 +1,3 @@
-// import { Routes } from '@angular/router';
-// import { LoginComponent } from './components/login/login.component';
-
-// export const routes: Routes = [
-//   { path: 'login', component: LoginComponent },
-//   { path: '', redirectTo: '/login', pathMatch: 'full' },
-//   // Add more routes as you develop them
-// ];
-
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { Operator } from './components/operator/operator';
@@ -16,12 +7,14 @@ import { Track } from './components/track/track';
 import { Dispatch } from './components/dispatch/dispatch';
 import { Login } from './components/login/login';
 import { Customer } from './components/customer/customer';
+import { CustomerTrack } from './components/customer-track/customer-track';
 
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: Login },
   { path: 'customer', component: Customer },
+  { path: 'customer/track/:orderId', component: CustomerTrack },
   { path: 'operator', component: Operator },
   { path: 'operator/order-history', component: OrderHistory },
   { path: 'operator/dispatched-orders', component: DispatchedOrders },
@@ -29,4 +22,3 @@ export const routes: Routes = [
   { path: 'operator/dispatch/:orderId', component: Dispatch },
   { path: '**', redirectTo: '/login' }
 ];
-
