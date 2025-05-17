@@ -73,7 +73,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   private droneCoordinates: L.LatLngExpression = [this.HQlat, this.HQlng];
 
   // Movement increment for WASD keys
-  private readonly MOVEMENT_INCREMENT: number = 0.0005;
+  private readonly MOVEMENT_INCREMENT: number = 0.0001;
 
   //---------------------------------------------------
   // CONSTRUCTOR & LIFECYCLE HOOKS
@@ -85,25 +85,29 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   /**
-   * Initialize component and load order data
-   */
-  ngOnInit() {
-    // Get order ID from route parameters
-    this.orderId = this.route.snapshot.paramMap.get('orderId');
-    
-    if (!this.orderId) {
-      console.error('No order ID provided');
-      return;
-    }
-
-    console.log(`Fetching data for order ID: ${this.orderId}`);
-    this.loadOrderAndDroneData();
-    
-    // Set up automatic refreshing
-    this.updateInterval = setInterval(() => {
-      this.fetchDroneData();
-    }, 10000); // Refresh drone data every 10 seconds
+ * Initialize the component properties
+ */
+ngOnInit() {
+  // Get order ID from route parameters
+  this.orderId = this.route.snapshot.paramMap.get('orderId');
+  
+  if (!this.orderId) {
+    console.error('No order ID provided');
+    return;
   }
+
+  // Ensure HQ coordinates are NEGATIVE for southern hemisphere
+  // (Do NOT use Math.abs here)
+  console.log(`HQ coordinates: (${this.HQlat}, ${this.HQlng})`);
+  console.log(`Fetching data for order ID: ${this.orderId}`);
+  
+  this.loadOrderAndDroneData();
+  
+  // Set up automatic refreshing
+  this.updateInterval = setInterval(() => {
+    this.fetchDroneData();
+  }, 10000); // Refresh drone data every 10 seconds
+}
 
   /**
    * Fetch order and drone data from API
@@ -350,14 +354,19 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     return Math.abs(droneLat - destLat) < tolerance && Math.abs(droneLong - destLong) < tolerance;
   }
 
-  /**
-   * Check if drone is at HQ (within tolerance)
-   */
-  private isAtHQ(droneLat: number, droneLong: number): boolean {
-    // Use a small tolerance for position comparisons
-    const tolerance = 0.0001;
-    return Math.abs(droneLat - this.HQlat) < tolerance && Math.abs(droneLong - this.HQlng) < tolerance;
-  }
+/**
+ * Check if drone is at HQ (within tolerance)
+ */
+private isAtHQ(droneLat: number, droneLong: number): boolean {
+  // Use a small tolerance for position comparisons
+  const tolerance = 0.001; // Increased tolerance to about 100 meters
+  
+  // Log for debugging
+  console.log(`Checking if drone at HQ: Drone(${droneLat}, ${droneLong}) vs HQ(${this.HQlat}, ${this.HQlng})`);
+  console.log(`Distance: lat=${Math.abs(droneLat - this.HQlat)}, lng=${Math.abs(droneLong - this.HQlng)}`);
+  
+  return Math.abs(droneLat - this.HQlat) < tolerance && Math.abs(droneLong - this.HQlng) < tolerance;
+}
 
   /**
    * Get the appropriate label text for the current drone state
@@ -480,55 +489,53 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   //---------------------------------------------------
   // MAP INITIALIZATION
   //---------------------------------------------------
-  /**
-   * Initialize the Leaflet map with markers and boundaries
-   */
   private initMap(): void {
-    try {
-      console.log('Initializing map');
-      
-      // Check if map container exists
-      const mapElement = document.getElementById('map');
-      if (!mapElement) {
-        console.error('Map container element not found');
-        return;
-      }
-      
-      console.log('Map container found, creating Leaflet map');
-      
-      // Create the map instance centered on HQ coordinates
-      this.map = L.map('map').setView(this.HQCoordinates, 14);
-
-      // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(this.map);
-
-      // Add headquarters marker
-      this.addHeadquartersMarker();
-      
-      // Add 5km operational radius circle
-      this.addOperationalRadiusCircle();
-      
-      // Add destination marker if order details exist
-      if (this.orderDetails && this.orderDetails.destination) {
-        this.addDestinationMarker();
-      }
-      
-      // Add drone marker if we have drone details
-      if (this.droneDetails) {
-        this.addDroneMarker();
-      }
-      
-      // Mark map as initialized
-      this.mapInitialized = true;
-      console.log('Map initialization complete');
-      
-    } catch (error) {
-      console.error('Error initializing map:', error);
+  try {
+    console.log('Initializing map');
+    
+    // Check if map container exists
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+      console.error('Map container element not found');
+      return;
     }
+    
+    console.log('Map container found, creating Leaflet map');
+    console.log(`Using HQ coordinates for map: ${this.HQCoordinates}`);
+    
+    // Create the map instance centered on HQ coordinates
+    this.map = L.map('map').setView(this.HQCoordinates, 14);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    // Add headquarters marker
+    this.addHeadquartersMarker();
+    
+    // Add 5km operational radius circle
+    this.addOperationalRadiusCircle();
+    
+    // Add destination marker if order details exist
+    if (this.orderDetails && this.orderDetails.destination) {
+      this.addDestinationMarker();
+    }
+    
+    // Add drone marker if we have drone details
+    if (this.droneDetails) {
+      this.addDroneMarker();
+    }
+    
+    // Mark map as initialized
+    this.mapInitialized = true;
+    console.log('Map initialization complete');
+    
+  } catch (error) {
+    console.error('Error initializing map:', error);
   }
+}
 
   //---------------------------------------------------
   // MARKER CREATION METHODS
@@ -537,41 +544,73 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Add headquarters marker to the map
    */
-  private addHeadquartersMarker(): void {
-    if (!this.map) return;
+/**
+ * Add headquarters marker to the map
+ */
+/**
+ * Add headquarters marker to the map with a visible red square
+ */
+private addHeadquartersMarker(): void {
+  if (!this.map) return;
+  
+  try {
+    // Use the positive HQ coordinates for the marker
+    const hqLatLng = [this.HQlat, this.HQlng];
+    console.log(`Adding HQ marker at coordinates: ${hqLatLng}`);
     
-    try {
-      const headquartersMarker = L.marker([this.HQlat, this.HQlng])
-        .addTo(this.map)
-        .bindPopup('Headquarters');
-      
-      console.log('HQ marker added');
-    } catch (error) {
-      console.error('Error adding headquarters marker:', error);
-    }
+    // Create a custom div icon (red square)
+    const customHQIcon = L.divIcon({
+      className: 'custom-hq-marker',
+      html: '<div style="background-color: red; width: 20px; height: 20px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    
+    // Create marker with custom icon
+    const headquartersMarker = L.marker(hqLatLng as L.LatLngExpression, {
+      icon: customHQIcon
+    })
+    .addTo(this.map)
+    .bindPopup('Headquarters');
+    
+    // Add a simple circle around HQ for better visibility
+    const hqCircle = L.circle(hqLatLng as L.LatLngExpression, {
+      radius: 200,  // 200 meters
+      color: 'red',
+      fillColor: 'red',
+      fillOpacity: 0.2,
+      weight: 2
+    }).addTo(this.map);
+    
+    console.log('HQ marker (red square) and circle added');
+  } catch (error) {
+    console.error('Error adding headquarters marker:', error);
   }
+}
 
   /**
-   * Add 5km operational radius circle around HQ
-   */
-  private addOperationalRadiusCircle(): void {
-    if (!this.map) return;
+ * Add 5km operational radius circle around HQ
+ */
+private addOperationalRadiusCircle(): void {
+  if (!this.map) return;
+  
+  try {
+    const radiusInMeters = 5000;
+    console.log(`Adding operational radius circle at: ${this.HQCoordinates}`);
     
-    try {
-      const radiusInMeters = 5000;
-      const circle = L.circle(this.HQCoordinates, {
-        radius: radiusInMeters,
-        color: '#3E1314',
-        weight: 2,
-        fill: false,
-        dashArray: '5, 10'
-      }).addTo(this.map);
-      
-      console.log('Operational radius circle added');
-    } catch (error) {
-      console.error('Error adding operational radius circle:', error);
-    }
+    const circle = L.circle(this.HQCoordinates, {
+      radius: radiusInMeters,
+      color: '#3E1314',
+      weight: 2,
+      fill: false,
+      dashArray: '5, 10'
+    }).addTo(this.map);
+    
+    console.log('Operational radius circle added');
+  } catch (error) {
+    console.error('Error adding operational radius circle:', error);
   }
+}
 
   /**
    * Add drone marker to the map
@@ -685,100 +724,110 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   //---------------------------------------------------
   
   /**
-   * Handle keyboard events for drone movement
-   */
-  @HostListener('window:keydown', ['$event'])
-  handleKeyDown(event: KeyboardEvent): void {
-    // Only handle keys if keyboard controls are enabled and drone is in a movable state (delivering or returning)
-    if (!this.keyboardEnabled || !this.droneDetails || 
-        (this.droneState !== 'delivering' && this.droneState !== 'returning')) return;
-    
-    let latChange = 0;
-    let lngChange = 0;
-    
-    // Determine which key was pressed and calculate position change
-    switch (event.key.toLowerCase()) {
-      case 'w': // Move north (decrease latitude)
-        latChange = -this.MOVEMENT_INCREMENT;
-        break;
-      case 's': // Move south (increase latitude)
-        latChange = this.MOVEMENT_INCREMENT;
-        break;
-      case 'a': // Move west (decrease longitude)
-        lngChange = -this.MOVEMENT_INCREMENT;
-        break;
-      case 'd': // Move east (increase longitude)
-        lngChange = this.MOVEMENT_INCREMENT;
-        break;
-      default:
-        return; // Exit if not a movement key
-    }
-    
-    // Calculate new position
-    const newLatitude = this.droneDetails.latest_latitude + latChange;
-    const newLongitude = this.droneDetails.latest_longitude + lngChange;
-    
-    console.log(`Moving drone to: ${newLatitude}, ${newLongitude}`);
-    
-    // Update drone position in the database
-    this.updateDroneInDatabase(newLatitude, newLongitude);
+ * Handle keyboard events for drone movement
+ */
+@HostListener('window:keydown', ['$event'])
+handleKeyDown(event: KeyboardEvent): void {
+  // Only handle keys if keyboard controls are enabled and drone is in a movable state (delivering or returning)
+  if (!this.keyboardEnabled || !this.droneDetails || 
+      (this.droneState !== 'delivering' && this.droneState !== 'returning')) return;
+  
+  let latChange = 0;
+  let lngChange = 0;
+  
+  // Determine which key was pressed and calculate position change
+  switch (event.key.toLowerCase()) {
+    case 'w': // Move north (decrease latitude)
+      latChange = -this.MOVEMENT_INCREMENT;
+      break;
+    case 's': // Move south (increase latitude)
+      latChange = this.MOVEMENT_INCREMENT;
+      break;
+    case 'a': // Move west (decrease longitude)
+      lngChange = -this.MOVEMENT_INCREMENT;
+      break;
+    case 'd': // Move east (increase longitude)
+      lngChange = this.MOVEMENT_INCREMENT;
+      break;
+    default:
+      return; // Exit if not a movement key
   }
+  
+  // Calculate new position
+  const newLatitude = this.droneDetails.latest_latitude + latChange;
+  const newLongitude = this.droneDetails.latest_longitude + lngChange;
+  
+  console.log(`Moving drone to: ${newLatitude}, ${newLongitude}`);
+  
+  // Update drone position in the database
+  this.updateDroneInDatabase(newLatitude, newLongitude);
+}
   
   /**
    * Update drone position in the database
    */
-  private updateDroneInDatabase(latitude: number, longitude: number): void {
-    if (!this.droneDetails) return;
-    
-    // Call API to update drone position
-    this.apiService.callApi('updateDrone', {
-      id: this.droneDetails.id,
-      latest_latitude: latitude,
-      latest_longitude: longitude,
-      // Include other properties to maintain their values
-      altitude: this.droneDetails.altitude,
-      battery_level: this.droneDetails.battery_level,
-      is_available: this.droneDetails.is_available
-    }).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          console.log('Drone position updated successfully:', response.data);
-          
-          // Update local drone details
-          this.droneDetails!.latest_latitude = latitude;
-          this.droneDetails!.latest_longitude = longitude;
-          
-          // Update map marker
-          this.updateDronePosition();
-          
-          if (this.droneState === 'delivering' && this.orderDetails) {
-            // Check if drone has reached destination during delivery
-            if (this.isAtDestination(
-              latitude, 
-              longitude, 
-              this.orderDetails.destination.latitude, 
-              this.orderDetails.destination.longitude
-            )) {
-              // Drone has reached destination, show notification and update state
-              this.handleDeliveryCompleted();
-            }
-          } 
-          else if (this.droneState === 'returning') {
-            // Check if drone has reached HQ during return journey
-            if (this.isAtHQ(latitude, longitude)) {
-              // Drone has reached HQ, complete the mission
-              this.handleReturnCompleted();
-            }
+  /**
+ * Update drone position in the database
+ */
+private updateDroneInDatabase(latitude: number, longitude: number): void {
+  if (!this.droneDetails) return;
+  
+  // Call API to update drone position
+  this.apiService.callApi('updateDrone', {
+    id: this.droneDetails.id,
+    latest_latitude: latitude,
+    latest_longitude: longitude,
+    // Include other properties to maintain their values
+    altitude: this.droneDetails.altitude,
+    battery_level: this.droneDetails.battery_level,
+    is_available: this.droneDetails.is_available
+  }).subscribe({
+    next: (response: any) => {
+      if (response.success) {
+        console.log('Drone position updated successfully:', response.data);
+        
+        // Update local drone details
+        this.droneDetails!.latest_latitude = latitude;
+        this.droneDetails!.latest_longitude = longitude;
+        
+        // Update map marker
+        this.updateDronePosition();
+        
+        if (this.droneState === 'delivering' && this.orderDetails) {
+          // Check if drone has reached destination during delivery
+          if (this.isAtDestination(
+            latitude, 
+            longitude, 
+            this.orderDetails.destination.latitude, 
+            this.orderDetails.destination.longitude
+          )) {
+            // Drone has reached destination, show notification and update state
+            this.handleDeliveryCompleted();
           }
-        } else {
-          console.error('Failed to update drone position:', response.message);
+        } 
+        else if (this.droneState === 'returning') {
+          // Check if drone has reached HQ during return journey
+          if (this.isAtHQ(latitude, longitude)) {
+            console.log('Drone has reached HQ! Completing return process...');
+            // Drone has reached HQ, complete the mission
+            this.handleReturnCompleted();
+          } else {
+            console.log('Drone not yet at HQ, continuing return journey');
+            // Calculate distance to HQ for debugging
+            const latDiff = Math.abs(latitude - this.HQlat);
+            const lngDiff = Math.abs(longitude - this.HQlng);
+            console.log(`Distance to HQ: lat=${latDiff}, lng=${lngDiff}`);
+          }
         }
-      },
-      error: (err) => {
-        console.error('Error updating drone position:', err);
+      } else {
+        console.error('Failed to update drone position:', response.message);
       }
-    });
-  }
+    },
+    error: (err) => {
+      console.error('Error updating drone position:', err);
+    }
+  });
+}
   
   /**
    * Handle when the drone has arrived at the delivery destination
@@ -854,51 +903,56 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Handle when the drone arrives back at HQ
-   */
-  private handleReturnCompleted(): void {
-    if (!this.droneDetails) return;
-    
-    // Show popup alert when drone reaches HQ (fulfilling fourth bullet point)
-    window.alert('Drone has returned to headquarters successfully!');
-    
-    // Update drone state
-    this.droneState = 'completed';
-    
-    // Disable keyboard controls now that mission is complete (fulfilling sixth bullet point)
-    this.keyboardEnabled = false;
-    
-    // Update drone in database (fulfilling fifth bullet point):
-    // 1. Set altitude to 0
-    // 2. Reset battery to 100%
-    // 3. Set is_available to true (drone is available for new deliveries)
-    this.apiService.callApi('updateDrone', {
-      id: this.droneDetails.id,
-      latest_latitude: this.droneDetails.latest_latitude,
-      latest_longitude: this.droneDetails.latest_longitude,
-      altitude: 0,  // Set altitude to 0 as the drone has landed
-      battery_level: 100,  // Reset battery to 100%
-      is_available: true,  // Make drone available again
-      order_id: null
-    }).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          console.log('Drone marked as returned and available:', response.data);
-          
-          // Update local drone details
-          this.droneDetails!.altitude = 0;
-          this.droneDetails!.battery_level = 100;
-          this.droneDetails!.is_available = true;
-          
-        } else {
-          console.error('Failed to update drone after return:', response.message);
-        }
-      },
-      error: (err) => {
-        console.error('Error updating drone after return:', err);
+ * Handle when the drone arrives back at HQ
+ */
+private handleReturnCompleted(): void {
+  if (!this.droneDetails) return;
+  
+  // Show popup alert when drone reaches HQ (fulfilling fourth bullet point)
+  window.alert('Drone has returned to headquarters successfully!');
+  
+  // Update drone state
+  this.droneState = 'completed';
+  
+  // Disable keyboard controls now that mission is complete (fulfilling sixth bullet point)
+  this.keyboardEnabled = false;
+  
+  // Update drone in database (fulfilling fifth bullet point):
+  // 1. Set altitude to 0
+  // 2. Reset battery to 100%
+  // 3. Set is_available to true (drone is available for new deliveries)
+  this.apiService.callApi('updateDrone', {
+    id: this.droneDetails.id,
+    latest_latitude: this.HQlat,  // Force exact HQ coordinates
+    latest_longitude: this.HQlng, // Force exact HQ coordinates
+    altitude: 0,  // Set altitude to 0 as the drone has landed
+    battery_level: 100,  // Reset battery to 100%
+    is_available: true,  // Make drone available again
+    order_id: null
+  }).subscribe({
+    next: (response: any) => {
+      if (response.success) {
+        console.log('Drone marked as returned and available:', response.data);
+        
+        // Update local drone details
+        this.droneDetails!.latest_latitude = this.HQlat;
+        this.droneDetails!.latest_longitude = this.HQlng;
+        this.droneDetails!.altitude = 0;
+        this.droneDetails!.battery_level = 100;
+        this.droneDetails!.is_available = true;
+        
+        // Update map
+        this.updateDronePosition();
+        
+      } else {
+        console.error('Failed to update drone after return:', response.message);
       }
-    });
-  }
+    },
+    error: (err) => {
+      console.error('Error updating drone after return:', err);
+    }
+  });
+}
 
   //---------------------------------------------------
   // NAVIGATION
