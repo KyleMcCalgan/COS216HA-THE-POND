@@ -1,12 +1,47 @@
-
-
+<div class="customer-container">
+  <h2>Track Your Order</h2>
+  
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-state">
+    <p>Loading order details...</p>
+  </div>
+  
+  <!-- Error state -->
+  <div *ngIf="!loading && error" class="error-state">
+    <p>{{ error }}</p>
+  </div>
+  
+  <!-- Order details and tracking -->
   <div *ngIf="!loading && !error && orderDetails" class="order-tracking">
     <div class="order-summary">
       <h3>Order #{{ orderId }}</h3>
       <p><strong>Date:</strong> {{ orderDetails.created_at | date:'medium' }}</p>
       <p><strong>Current Status:</strong> <span class="status">{{ orderDetails.state }}</span></p>
     </div>
+    
+    <!-- Map section -->
+    <div class="map-section">
+      <h3>Live Tracking</h3>
+      <div class="map-container">
+        <div id="customer-map"></div>
+      </div>
+      <div class="map-legend">
+        <div class="legend-item">
+          <span class="legend-marker hq"></span>
+          <span>Headquarters</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-marker destination"></span>
+          <span>Destination</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-marker drone"></span>
+          <span>Drone</span>
+        </div>
+      </div>
+    </div>
 
+    <!-- Tracking timeline -->
     <div class="tracking-timeline">
       <div *ngFor="let step of trackingSteps; let i = index" class="tracking-step" [ngClass]="{'completed': step.completed}">
         <div class="tracking-indicator">
@@ -20,6 +55,7 @@
       </div>
     </div>
 
+    <!-- Product details -->
     <div class="product-details" *ngIf="orderDetails.products && orderDetails.products.length">
       <h3>Products in this Order</h3>
       <div *ngFor="let product of orderDetails.products" class="product-item">
@@ -28,6 +64,8 @@
     </div>
   </div>
 
+  <!-- Back button -->
   <div class="back-button">
     <button routerLink="/customer">Back to My Orders</button>
   </div>
+</div>
