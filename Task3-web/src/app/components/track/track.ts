@@ -59,6 +59,10 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   private batteryDepletionInterval: any = null;
   private errorMessage: string | null = null;
   private isDroneDead: boolean = false; // Track if drone has died
+  private dustDevils: L.Circle[] = [];
+  private dustDevilPositions: L.LatLngExpression[] = [];
+  private lastDronePosition: L.LatLngExpression | null = null;
+  private dustDevilSpawnInterval: any = null;
 
   // Location coordinates
   //---------------------------------------------------
@@ -87,37 +91,51 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Initialize the component properties
    */
-  ngOnInit() {
-    // Get drone ID from route parameters (could be order_id for backward compatibility)
-    const routeParam = this.route.snapshot.paramMap.get('orderId');
-    
-    if (!routeParam) {
-      this.errorMessage = 'No drone/order ID provided';
-      console.error(this.errorMessage);
-      return;
-    }
-
-    // Check if this is a drone ID (starts with 'drone-') or a regular order ID
-    if (routeParam.startsWith('drone-')) {
-      this.droneId = routeParam.split('-')[1];
-      console.log(`Tracking drone ID: ${this.droneId}`);
-    } else {
-      // For backward compatibility, if it's a regular number, treat it as order ID
-      console.log(`Tracking by order ID (legacy): ${routeParam}`);
-      this.findDroneByOrderId(routeParam);
-      return;
-    }
-
-    console.log(`HQ coordinates: (${this.HQlat}, ${this.HQlng})`);
-    console.log(`Fetching data for drone ID: ${this.droneId}`);
-    
-    this.loadDroneAndOrderData();
-    
-    // Set up automatic refreshing
-    this.updateInterval = setInterval(() => {
-      this.fetchDroneData();
-    }, 10000); // Refresh drone data every 10 seconds
+ngOnInit() {
+  // Get drone ID from route parameters (could be order_id for backward compatibility)
+  const routeParam = this.route.snapshot.paramMap.get('orderId');
+  
+  if (!routeParam) {
+    this.errorMessage = 'No drone/order ID provided';
+    console.error(this.errorMessage);
+    return;
   }
+
+  // Check if this is a drone ID (starts with 'drone-') or a regular order ID
+  if (routeParam.startsWith('drone-')) {
+    this.droneId = routeParam.split('-')[1];
+    console.log(`Tracking drone ID: ${this.droneId}`);
+  } else {
+    // For backward compatibility, if it's a regular number, treat it as order ID
+    console.log(`Tracking by order ID (legacy): ${routeParam}`);
+    this.findDroneByOrderId(routeParam);
+    return;
+  }
+
+  console.log(`HQ coordinates: (${this.HQlat}, ${this.HQlng})`);
+  console.log(`Fetching data for drone ID: ${this.droneId}`);
+  
+  this.loadDroneAndOrderData();
+  
+  // Set up automatic refreshing
+  this.updateInterval = setInterval(() => {
+    this.fetchDroneData();
+  }, 10000); // Refresh drone data every 10 seconds
+
+  // Spawn dust devils after map is initialized and then every minute
+  setTimeout(() => {
+    if (this.mapInitialized) {
+      this.spawnDustDevils();
+    }
+    
+    // Set up interval to spawn new dust devils every minute
+    this.dustDevilSpawnInterval = setInterval(() => {
+      if (this.mapInitialized && this.map) {
+        this.spawnDustDevils();
+      }
+    }, 60000); // 60 seconds = 1 minute
+  }, 3000); // Wait 3 seconds to ensure map is fully initialized
+}
 
   /**
    * Find drone by order ID (for backward compatibility)
@@ -218,25 +236,30 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Process drone details from API data
    */
-  private processDroneDetails(droneData: any) {
-    // Convert latitude to negative for southern hemisphere
-    const rawLatitude = parseFloat(droneData.latest_latitude) || 0;
-    const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
-    
-    this.droneDetails = {
-      id: parseInt(droneData.id),
-      is_available: droneData.is_available === true,
-      latest_latitude: adjustedLatitude,
-      latest_longitude: parseFloat(droneData.latest_longitude) || 0,
-      altitude: parseFloat(droneData.altitude) || 0,
-      battery_level: parseInt(droneData.battery_level) || 100,
-      current_operator_id: droneData.current_operator_id,
-      order_id: droneData.order_id || droneData.Order_ID
-    };
-    
-    console.log('Processed drone details with adjusted latitude:', this.droneDetails);
-    
-    // Check if drone is dead (battery 0 and altitude > 30)
+ private processDroneDetails(droneData: any) {
+  // Convert latitude to negative for southern hemisphere
+  const rawLatitude = parseFloat(droneData.latest_latitude) || 0;
+  const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
+  
+  this.droneDetails = {
+    id: parseInt(droneData.id),
+    is_available: droneData.is_available === true,
+    latest_latitude: adjustedLatitude,
+    latest_longitude: parseFloat(droneData.latest_longitude) || 0,
+    altitude: parseFloat(droneData.altitude) || 0,
+    battery_level: parseInt(droneData.battery_level) || 100,
+    current_operator_id: droneData.current_operator_id,
+    order_id: droneData.order_id || droneData.Order_ID
+  };
+  
+  console.log('Processed drone details with adjusted latitude:', this.droneDetails);
+  
+  // Check altitude limit first (this is the new check)
+  this.checkAltitudeLimit();
+  
+  // Only continue with other checks if drone hasn't violated altitude limit
+  if (!this.isDroneDead) {
+    // Check if drone is dead (battery 0 and altitude > 30) - your existing logic
     this.checkDroneHealth();
     
     // Start battery depletion if the drone is in use and not dead
@@ -257,6 +280,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     this.keyboardEnabled = !this.isDroneDead && 
       (this.droneState === 'delivering' || this.droneState === 'returning');
   }
+}
 
   /**
    * Fetch order data by order ID
@@ -702,59 +726,72 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     }, 100); // Short delay to ensure DOM is ready
   }
 
-  /**
-   * Clean up resources when component is destroyed
-   */
-  ngOnDestroy() {
-    this.keyboardEnabled = false;
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-    }
-    if (this.batteryDepletionInterval) {
-      clearInterval(this.batteryDepletionInterval);
-    }
-    if (this.map) {
-      this.map.remove();
-      this.map = null;
-    }
+/**
+ * Clean up resources when component is destroyed
+ */
+ngOnDestroy() {
+  this.keyboardEnabled = false;
+  if (this.updateInterval) {
+    clearInterval(this.updateInterval);
   }
+  if (this.batteryDepletionInterval) {
+    clearInterval(this.batteryDepletionInterval);
+  }
+  if (this.dustDevilSpawnInterval) {
+    clearInterval(this.dustDevilSpawnInterval);
+  }
+  
+  // Clear dust devils before destroying the map
+  this.clearDustDevils();
+  
+  if (this.map) {
+    this.map.remove();
+    this.map = null;
+  }
+}
 
   //---------------------------------------------------
   // MAP INITIALIZATION
   //---------------------------------------------------
   private initMap(): void {
-    try {
-      console.log('Initializing map');
-      const mapElement = document.getElementById('map');
-      if (!mapElement) {
-        this.errorMessage = 'Map container element not found';
-        console.error(this.errorMessage);
-        return;
-      }
-      
-      console.log('Map container found, creating Leaflet map');
-      this.map = L.map('map').setView(this.HQCoordinates, 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(this.map);
-
-      this.addHeadquartersMarker();
-      this.addOperationalRadiusCircle();
-      if (this.orderDetails && this.orderDetails.destination && this.orderDetails.orderId) {
-        this.addDestinationMarker();
-      }
-      if (this.droneDetails) {
-        this.addDroneMarker();
-      }
-      
-      this.mapInitialized = true;
-      console.log('Map initialization complete');
-    } catch (error) {
-      this.errorMessage = 'Error initializing map: ' + error;
-      console.error('Error initializing map:', error);
+  try {
+    console.log('Initializing map');
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+      this.errorMessage = 'Map container element not found';
+      console.error(this.errorMessage);
+      return;
     }
+    
+    console.log('Map container found, creating Leaflet map');
+    this.map = L.map('map').setView(this.HQCoordinates, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    this.addHeadquartersMarker();
+    this.addOperationalRadiusCircle();
+    if (this.orderDetails && this.orderDetails.destination && this.orderDetails.orderId) {
+      this.addDestinationMarker();
+    }
+    if (this.droneDetails) {
+      this.addDroneMarker();
+    }
+    
+    this.mapInitialized = true;
+    console.log('Map initialization complete');
+    
+    // Spawn initial dust devils after a short delay
+    setTimeout(() => {
+      this.spawnDustDevils();
+    }, 1000);
+    
+  } catch (error) {
+    this.errorMessage = 'Error initializing map: ' + error;
+    console.error('Error initializing map:', error);
   }
+}
 
   /**
    * Add headquarters marker with a visible red square
@@ -766,7 +803,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       console.log(`Adding HQ marker at coordinates: ${hqLatLng}`);
       const customHQIcon = L.divIcon({
         className: 'custom-hq-marker',
-        html: '<div style="background-color: red; width: 20px; height: 20px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>',
+        html: '<div style="background-color: blue; width: 20px; height: 20px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>',
         iconSize: [24, 24],
         iconAnchor: [12, 12]
       });
@@ -777,8 +814,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       
       L.circle(hqLatLng as L.LatLngExpression, {
         radius: 200,
-        color: 'red',
-        fillColor: 'red',
+        color: '#2b4de3',
+        fillColor: '#129bc4',
         fillOpacity: 0.2,
         weight: 2
       }).addTo(this.map);
@@ -965,72 +1002,78 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Update drone position in the database
-   */
-  private updateDroneInDatabase(latitude: number, longitude: number): void {
-    if (!this.droneDetails || this.isDroneDead) return;
-    
-    // Ensure latitude is negative when sending to the database (convert back to positive for API)
-    const apiLatitude = latitude < 0 ? -latitude : latitude;
-    
-    this.apiService.callApi('updateDrone', {
-      id: this.droneDetails.id,
-      latest_latitude: apiLatitude,
-      latest_longitude: longitude,
-      altitude: this.droneDetails.altitude,
-      battery_level: this.droneDetails.battery_level,
-      is_available: this.droneDetails.is_available,
-      order_id: this.droneDetails.order_id
-    }).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          console.log('Drone position updated successfully:', response.data);
-          // Convert the latitude back to negative for local use
-          const rawLatitude = parseFloat(response.data.latest_latitude) || 0;
-          const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
-          
-          this.droneDetails!.latest_latitude = adjustedLatitude;
-          this.droneDetails!.latest_longitude = longitude;
-          this.updateDronePosition();
-          
-          // Check if drone reached destination while delivering (only if we have a real destination)
-          if (this.droneState === 'delivering' && this.orderDetails && this.orderDetails.orderId) {
-            if (this.isAtDestination(
-              adjustedLatitude, 
-              longitude, 
-              this.orderDetails.destination.latitude, 
-              this.orderDetails.destination.longitude
-            )) {
-              this.handleDeliveryCompleted();
-            }
-          } 
-          // Check if drone reached HQ while returning
-          else if (this.droneState === 'returning') {
-            if (this.isAtHQ(adjustedLatitude, longitude)) {
-              console.log('Drone has reached HQ! Completing return process...');
-              this.handleReturnCompleted();
-            } else {
-              const latDiff = Math.abs(adjustedLatitude - this.HQlat);
-              const lngDiff = Math.abs(longitude - this.HQlng);
-              console.log(`Distance to HQ: lat=${latDiff}, lng=${lngDiff}`);
-            }
+ * Update drone position in the database
+ */
+private updateDroneInDatabase(latitude: number, longitude: number): void {
+  if (!this.droneDetails || this.isDroneDead) return;
+  
+  // Store the current position as the last position before moving
+  this.updateLastDronePosition();
+  
+  // Ensure latitude is negative when sending to the database (convert back to positive for API)
+  const apiLatitude = latitude < 0 ? -latitude : latitude;
+  
+  this.apiService.callApi('updateDrone', {
+    id: this.droneDetails.id,
+    latest_latitude: apiLatitude,
+    latest_longitude: longitude,
+    altitude: this.droneDetails.altitude,
+    battery_level: this.droneDetails.battery_level,
+    is_available: this.droneDetails.is_available,
+    order_id: this.droneDetails.order_id
+  }).subscribe({
+    next: (response: any) => {
+      if (response.success) {
+        console.log('Drone position updated successfully:', response.data);
+        // Convert the latitude back to negative for local use
+        const rawLatitude = parseFloat(response.data.latest_latitude) || 0;
+        const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
+        
+        this.droneDetails!.latest_latitude = adjustedLatitude;
+        this.droneDetails!.latest_longitude = longitude;
+        this.updateDronePosition();
+        
+        // CHECK FOR DUST DEVIL COLLISIONS AFTER MOVEMENT
+        this.checkDustDevilCollisions();
+        
+        // Check if drone reached destination while delivering (only if we have a real destination)
+        if (this.droneState === 'delivering' && this.orderDetails && this.orderDetails.orderId) {
+          if (this.isAtDestination(
+            adjustedLatitude, 
+            longitude, 
+            this.orderDetails.destination.latitude, 
+            this.orderDetails.destination.longitude
+          )) {
+            this.handleDeliveryCompleted();
           }
-          
-          // Clear any previous error messages on successful movement
-          if (this.errorMessage && this.errorMessage.includes('Cannot move drone')) {
-            this.errorMessage = null;
+        } 
+        // Check if drone reached HQ while returning
+        else if (this.droneState === 'returning') {
+          if (this.isAtHQ(adjustedLatitude, longitude)) {
+            console.log('Drone has reached HQ! Completing return process...');
+            this.handleReturnCompleted();
+          } else {
+            const latDiff = Math.abs(adjustedLatitude - this.HQlat);
+            const lngDiff = Math.abs(longitude - this.HQlng);
+            console.log(`Distance to HQ: lat=${latDiff}, lng=${lngDiff}`);
           }
-        } else {
-          this.errorMessage = 'Failed to update drone position: ' + response.message;
-          console.error(this.errorMessage);
         }
-      },
-      error: (err) => {
-        this.errorMessage = 'Error updating drone position: ' + err.message;
-        console.error('Error updating drone position:', err);
+        
+        // Clear any previous error messages on successful movement
+        if (this.errorMessage && this.errorMessage.includes('Cannot move drone')) {
+          this.errorMessage = null;
+        }
+      } else {
+        this.errorMessage = 'Failed to update drone position: ' + response.message;
+        console.error(this.errorMessage);
       }
-    });
-  }
+    },
+    error: (err) => {
+      this.errorMessage = 'Error updating drone position: ' + err.message;
+      console.error('Error updating drone position:', err);
+    }
+  });
+}
 
   /**
    * Handle when the drone has arrived at the delivery destination
@@ -1093,6 +1136,73 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+ * Spawn dust devils (white circles) at random positions within operational radius
+ */
+private spawnDustDevils(): void {
+  if (!this.map || !this.mapInitialized) {
+    console.log('Map not ready for dust devils');
+    return;
+  }
+  
+  // Clear existing dust devils
+  this.clearDustDevils();
+  
+  // Generate between 5 and 10 dust devils
+  const dustDevilCount = Math.floor(Math.random() * 6) + 5; // 5-10 random count
+  
+  console.log(`Spawning ${dustDevilCount} dust devils`);
+  
+  for (let i = 0; i < dustDevilCount; i++) {
+    const position = this.generateRandomPositionInRadius();
+    this.createDustDevilAtPosition(position);
+  }
+  
+  console.log(`Successfully spawned ${this.dustDevils.length} dust devils`);
+}
+
+/**
+ * Generate a random position within the 5km operational radius
+ */
+private generateRandomPositionInRadius(): L.LatLngExpression {
+  let randomLat: number;
+  let randomLng: number;
+  let distance: number;
+  let attempts = 0;
+  const maxAttempts = 50; // Prevent infinite loops
+  
+  // Keep generating random positions until we find one within the operational radius
+  do {
+    // Generate random offset from HQ
+    // Use a more accurate conversion: 1 degree ≈ 111km, so 5km ≈ 0.045 degrees
+    const maxOffset = 0.045; // Roughly 5km in degrees
+    const latOffset = (Math.random() - 0.5) * maxOffset;
+    const lngOffset = (Math.random() - 0.5) * maxOffset;
+    
+    randomLat = this.HQlat + latOffset;
+    randomLng = this.HQlng + lngOffset;
+    
+    distance = this.calculateDistance(randomLat, randomLng, this.HQlat, this.HQlng);
+    attempts++;
+    
+    // If we can't find a position within operational radius after many attempts,
+    // use a position closer to HQ
+    if (attempts > maxAttempts) {
+      const reducedOffset = 0.02; // Smaller radius
+      randomLat = this.HQlat + (Math.random() - 0.5) * reducedOffset;
+      randomLng = this.HQlng + (Math.random() - 0.5) * reducedOffset;
+      break;
+    }
+  } while (distance > this.OPERATIONAL_RADIUS);
+  
+  console.log(`Generated dust devil position: [${randomLat}, ${randomLng}], distance from HQ: ${distance}m`);
+  return [randomLat, randomLng];
+}
+
   /**
    * Handle when the drone arrives back at HQ
    */
@@ -1142,6 +1252,314 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       }
     });
   }
+
+  /**
+ * Create a dust devil circle at the specified position
+ */
+private createDustDevilAtPosition(position: L.LatLngExpression): void {
+  if (!this.map) {
+    console.error('Cannot create dust devil: map not available');
+    return;
+  }
+  
+  console.log(`Creating dust devil at position: ${position}`);
+  
+  try {
+    const dustDevil = L.circle(position, {
+      radius: 10, // Increased radius to 50 meters for better visibility
+      color: '#FF4444', // Red border for better visibility
+      weight: 3, // Thicker border
+      fillColor: '#FFCCCC', // Light red fill
+      fillOpacity: 0.5, // Increased opacity
+      dashArray: '10, 5' // Dashed border for better visibility
+    }).addTo(this.map);
+    
+    // Add popup to identify the dust devil
+    dustDevil.bindPopup('⚠️ Dust Devil - Avoid!');
+    
+    // Store the dust devil and its position
+    this.dustDevils.push(dustDevil);
+    this.dustDevilPositions.push(position);
+    
+    console.log(`Dust devil created successfully at position: ${position}`);
+  } catch (error) {
+    console.error('Error creating dust devil:', error);
+  }
+}
+
+/**
+ * Clear all existing dust devils from the map
+ */
+private clearDustDevils(): void {
+  console.log(`Clearing ${this.dustDevils.length} dust devils`);
+  
+  this.dustDevils.forEach((dustDevil, index) => {
+    try {
+      if (this.map && this.map.hasLayer(dustDevil)) {
+        this.map.removeLayer(dustDevil);
+      }
+    } catch (error) {
+      console.error(`Error removing dust devil ${index}:`, error);
+    }
+  });
+  
+  this.dustDevils = [];
+  this.dustDevilPositions = [];
+  console.log('All dust devils cleared');
+}
+
+/**
+ * Check if drone has entered any dust devil and handle collision
+ */
+private checkDustDevilCollisions(): void {
+  if (!this.droneDetails || this.isDroneDead || this.dustDevilPositions.length === 0) return;
+  
+  const dronePosition: L.LatLngExpression = [
+    this.droneDetails.latest_latitude,
+    this.droneDetails.latest_longitude
+  ];
+  
+  // Check collision with each dust devil
+  for (let i = 0; i < this.dustDevilPositions.length; i++) {
+    const dustDevilPos = this.dustDevilPositions[i];
+    const dustDevilLat = Array.isArray(dustDevilPos) ? dustDevilPos[0] : dustDevilPos.lat;
+    const dustDevilLng = Array.isArray(dustDevilPos) ? dustDevilPos[1] : dustDevilPos.lng;
+    
+    const distance = this.calculateDistance(
+      this.droneDetails.latest_latitude,
+      this.droneDetails.latest_longitude,
+      dustDevilLat,
+      dustDevilLng
+    );
+    
+    // Check if drone is within 50 meters of dust devil center (matching the visual radius)
+    if (distance <= 50) {
+      console.log(`Drone entered dust devil at position ${i}! Distance: ${distance}m`);
+      this.handleDustDevilCollision();
+      return; // Handle only one collision at a time
+    }
+  }
+}
+
+/**
+ * Handle drone collision with dust devil - move up 10m and back
+ */
+private handleDustDevilCollision(): void {
+  if (!this.droneDetails || this.isDroneDead) return;
+  
+  // Show alert to user
+  window.alert('⚠️ DUST DEVIL DETECTED! ⚠️\n\nDrone is performing evasive maneuvers!\nClimbing 10 meters and reversing direction...');
+  
+  // Calculate reverse direction if we have a last position
+  let reverseLat = this.droneDetails.latest_latitude;
+  let reverseLng = this.droneDetails.latest_longitude;
+  
+  if (this.lastDronePosition) {
+    const lastLat = Array.isArray(this.lastDronePosition) ? this.lastDronePosition[0] : this.lastDronePosition.lat;
+    const lastLng = Array.isArray(this.lastDronePosition) ? this.lastDronePosition[1] : this.lastDronePosition.lng;
+    
+    // Calculate the direction the drone came from
+    const latDiff = this.droneDetails.latest_latitude - lastLat;
+    const lngDiff = this.droneDetails.latest_longitude - lastLng;
+    
+    // Move back in the opposite direction (2x the movement increment for a bigger step back)
+    reverseLat = this.droneDetails.latest_latitude - (latDiff * 2);
+    reverseLng = this.droneDetails.latest_longitude - (lngDiff * 2);
+    
+    // Ensure the reverse position is still within operational radius
+    const distanceFromHQ = this.calculateDistance(reverseLat, reverseLng, this.HQlat, this.HQlng);
+    if (distanceFromHQ > this.OPERATIONAL_RADIUS) {
+      // If reverse position is out of bounds, just move slightly back
+      reverseLat = this.droneDetails.latest_latitude - latDiff;
+      reverseLng = this.droneDetails.latest_longitude - lngDiff;
+    }
+  } else {
+    // If no last position, move slightly towards HQ
+    const directionToHQ = {
+      lat: (this.HQlat - this.droneDetails.latest_latitude) * 0.1,
+      lng: (this.HQlng - this.droneDetails.latest_longitude) * 0.1
+    };
+    reverseLat += directionToHQ.lat;
+    reverseLng += directionToHQ.lng;
+  }
+  
+  // Update drone position with increased altitude and reverse movement
+  const newAltitude = this.droneDetails.altitude + 5; // Climb 10 meters
+  
+  // CHECK IF NEW ALTITUDE EXCEEDS 30 METERS
+  if (newAltitude > 30) {
+    console.warn(`Evasive maneuver would exceed altitude limit (${newAltitude}m). Initiating emergency landing instead.`);
+    
+    // Set altitude to exactly 30m and trigger altitude violation
+    this.droneDetails.altitude = 31; // Set to 31 to trigger the violation
+    this.checkAltitudeLimit();
+    return; // Exit early, altitude violation will handle the rest
+  }
+  
+  // Convert latitude to positive for API call
+  const apiLatitude = reverseLat < 0 ? -reverseLat : reverseLat;
+  
+  this.apiService.callApi('updateDrone', {
+    id: this.droneDetails.id,
+    latest_latitude: apiLatitude,
+    latest_longitude: reverseLng,
+    altitude: newAltitude,
+    battery_level: this.droneDetails.battery_level,
+    is_available: this.droneDetails.is_available,
+    order_id: this.droneDetails.order_id
+  }).subscribe({
+    next: (response: any) => {
+      if (response.success) {
+        console.log('Drone successfully performed evasive maneuver:', response.data);
+        
+        // Update local drone details
+        this.droneDetails!.latest_latitude = reverseLat; // Keep negative for local use
+        this.droneDetails!.latest_longitude = reverseLng;
+        this.droneDetails!.altitude = newAltitude;
+        
+        // Check altitude limit after update
+        this.checkAltitudeLimit();
+        
+        // Update drone position on map (only if not dead from altitude violation)
+        if (!this.isDroneDead) {
+          this.updateDronePosition();
+        }
+        
+        // Clear error message if dust devil collision was handled successfully
+        if (!this.isDroneDead) {
+          this.errorMessage = null;
+        }
+        
+        console.log(`Drone moved to safe position: (${reverseLat}, ${reverseLng}) at altitude ${newAltitude}m`);
+      } else {
+        this.errorMessage = 'Failed to perform evasive maneuver: ' + response.message;
+        console.error(this.errorMessage);
+      }
+    },
+    error: (err) => {
+      this.errorMessage = 'Error performing evasive maneuver: ' + err.message;
+      console.error('Error performing evasive maneuver:', err);
+    }
+  });
+}
+
+/**
+ * Store the current drone position as the last position (for reverse direction calculation)
+ */
+private updateLastDronePosition(): void {
+  if (this.droneDetails) {
+    this.lastDronePosition = [
+      this.droneDetails.latest_latitude,
+      this.droneDetails.latest_longitude
+    ];
+  }
+}
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+private checkAltitudeLimit(): void {
+  if (!this.droneDetails) return;
+  
+  // Check if drone exceeds 30 meters altitude
+  if (this.droneDetails.altitude > 30) {
+    console.log(`Drone exceeded altitude limit: ${this.droneDetails.altitude}m`);
+    this.handleAltitudeViolation();
+  }
+}
+
+private handleAltitudeViolation(): void {
+  if (!this.droneDetails) return;
+  
+  // Show alert about altitude violation
+  window.alert(`⚠️ ALTITUDE VIOLATION ⚠️\n\nDrone #${this.droneDetails.id} has exceeded the maximum altitude of 30 meters!\nCurrent altitude: ${this.droneDetails.altitude}m\n\nInitiating emergency landing and returning order to storage...`);
+  
+  // Set flags to prevent further operations
+  this.isDroneDead = true;
+  this.droneState = 'dead';
+  this.keyboardEnabled = false;
+  
+  // Clear any existing intervals
+  if (this.batteryDepletionInterval) {
+    clearInterval(this.batteryDepletionInterval);
+    this.batteryDepletionInterval = null;
+  }
+  
+  // Step 1: Update order back to storage if there is an active order
+  if (this.droneDetails.order_id && this.orderDetails && this.orderDetails.customerId) {
+    this.apiService.callApi('updateOrder', {
+      customer_id: this.orderDetails.customerId,
+      order_id: this.droneDetails.order_id,
+      state: 'Storage'
+    }).subscribe({
+      next: (orderResponse: any) => {
+        if (orderResponse.success) {
+          console.log('Order returned to storage due to altitude violation:', orderResponse.data);
+        } else {
+          console.error('Failed to return order to storage:', orderResponse.message);
+        }
+        
+        // Step 2: Update drone after order is handled
+        this.updateDroneAfterAltitudeViolation();
+      },
+      error: (err) => {
+        console.error('Error returning order to storage:', err);
+        // Still update drone even if order update failed
+        this.updateDroneAfterAltitudeViolation();
+      }
+    });
+  } else {
+    // No active order, just update the drone
+    this.updateDroneAfterAltitudeViolation();
+  }
+}
+
+private updateDroneAfterAltitudeViolation(): void {
+  if (!this.droneDetails) return;
+  
+  // Step 2: Update drone to crashed state
+  this.apiService.callApi('updateDrone', {
+    id: this.droneDetails.id,
+    altitude: 0, // Set altitude to 0 (crashed)
+    battery_level: this.droneDetails.battery_level,
+    is_available: false,
+    order_id: null, // Remove order assignment
+    latest_latitude: -this.droneDetails.latest_latitude, // Convert to positive for API
+    latest_longitude: this.droneDetails.latest_longitude
+  }).subscribe({
+    next: (droneResponse: any) => {
+      if (droneResponse.success) {
+        console.log('Drone updated after altitude violation:', droneResponse.data);
+        
+        // Update local drone details
+        this.droneDetails!.altitude = 0;
+        this.droneDetails!.is_available = false;
+        this.droneDetails!.order_id = null;
+        
+        // Update map to show drone at ground level (crashed)
+        this.updateDronePosition();
+        
+        // Set error message to indicate drone has crashed
+        this.errorMessage = 'Drone has crashed due to altitude violation and is no longer operational.';
+        
+        // Clear all intervals to stop further processing
+        if (this.updateInterval) {
+          clearInterval(this.updateInterval);
+          this.updateInterval = null;
+        }
+        
+      } else {
+        console.error('Failed to update drone after altitude violation:', droneResponse.message);
+        this.errorMessage = 'Failed to update drone status after crash: ' + droneResponse.message;
+      }
+    },
+    error: (err) => {
+      console.error('Error updating drone after altitude violation:', err);
+      this.errorMessage = 'Error updating drone status after crash: ' + err.message;
+    }
+  });
+}
 
   /**
    * Navigate back to dispatched orders view
