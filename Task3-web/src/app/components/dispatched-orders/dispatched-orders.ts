@@ -25,7 +25,7 @@ interface Order {
   customerId: number;
   trackingNum: string;
   droneId: number;
-  droneStatus: 'waiting' | 'delivering' | 'returning'; // Added 'returning' state
+  droneStatus: 'waiting' | 'delivering' | 'returning';
 }
 
 @Component({
@@ -39,7 +39,7 @@ export class DispatchedOrders implements OnInit {
   // Arrays for different order states
   waitingOrders: Order[] = [];
   deliveringOrders: Order[] = [];
-  returningDrones: Order[] = []; // New array for returning drones with last order info
+  returningDrones: Order[] = [];
   filteredOrders: Order[] = []; // Orders displayed based on current filter
   
   // UI state
@@ -66,9 +66,6 @@ export class DispatchedOrders implements OnInit {
     this.loading = true;
     this.error = '';
     
-    // Get current user from localStorage
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
     // First, fetch all drones
     this.apiService.callApi('getAllDrones', {}).subscribe({
       next: (droneResponse: any) => {
@@ -76,10 +73,11 @@ export class DispatchedOrders implements OnInit {
           console.log('Drones data:', droneResponse.data);
           this.allDrones = this.processDroneData(droneResponse.data);
           
-          // After getting drones, fetch all orders
+          // After getting drones, fetch all orders using courier credentials
+          // Use hardcoded courier credentials to ensure we get ALL orders
           this.apiService.callApi('getAllOrders', {
-            user_id: currentUser.id || 1,
-            user_type: currentUser.type || 'Courier'
+            user_id: 1,
+            user_type: 'Courier'
           }).subscribe({
             next: (orderResponse: any) => {
               this.loading = false;

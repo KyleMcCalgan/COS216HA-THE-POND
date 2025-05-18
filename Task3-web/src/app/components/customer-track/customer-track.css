@@ -1,363 +1,378 @@
-.customer-container {
-  background-color: #f5f5f5;
+.customer-track-container {
   min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 0;
-  font-family: Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  width: 100%; /* Added explicit 100% width */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Header section */
-h2 {
-  color: #3E1314;
+/* Header */
+.track-header {
+  background: white;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.track-header h1 {
+  color: #2c3e50;
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.order-id {
+  color: #7f8c8d;
+  font-size: 1.1rem;
   margin: 0;
-  font-size: 1.6rem;
   font-weight: 500;
-  padding: 1rem 2rem;
-  background-color: white;
+}
+
+/* Loading Container */
+.loading-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  width: 100%; /* Added explicit 100% width */
+  padding: 4rem 2rem;
+  text-align: center;
 }
 
-/* Main content section */
-.order-tracking {
-  flex: 1;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 90%; /* Changed from fixed 1200px to 90% */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error Container */
+.error-container {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  max-width: 500px;
+  margin: 2rem auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-container h3 {
+  color: #e74c3c;
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+}
+
+.error-container p {
+  color: #7f8c8d;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+/* Main Content */
+.track-content {
+  max-width: 1200px;
   margin: 0 auto;
-  width: 100%; /* Added explicit width */
+  padding: 0 1rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
-/* Order summary styles */
-.order-summary {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+/* Cards */
+.status-card,
+.map-section,
+.order-details-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Status Card */
+.status-card {
   padding: 1.5rem;
-  width: 100%; /* Added explicit width */
 }
 
-.order-summary h3 {
-  color: #3E1314;
-  margin-top: 0;
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #eee;
-  font-size: 1.2rem;
-  width: 100%; /* Added explicit width */
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ecf0f1;
 }
 
-.status {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.25rem;
-  color: white;
-  font-weight: bold;
+.status-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  font-weight: 600;
   font-size: 0.9rem;
-  background-color: #2196F3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* Map section styles */
-.map-section {
-  background-color: white;
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-delivering {
+  background: #cce5ff;
+  color: #004d9f;
+}
+
+.status-delivered {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-details {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.detail-item .label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.detail-item .value {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.detail-item .value.distance {
+  color: #3498db;
+  font-weight: 700;
+}
+
+/* Map Section */
+.map-section {
   padding: 1.5rem;
-  flex-grow: 1;
-  width: 100%; /* Added explicit width */
 }
 
 .map-section h3 {
-  color: #3E1314;
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #eee;
-  font-size: 1.2rem;
-  width: 100%; /* Added explicit width */
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
 }
 
 .map-container {
+  position: relative;
   width: 100%;
-  height: 0;
-  padding-bottom: 40%; /* Changed from fixed 400px to responsive percentage */
+  height: 400px;
   border-radius: 8px;
   overflow: hidden;
-  position: relative;
-  min-height: 250px; /* Minimum height for very small screens */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 #customer-map {
   width: 100%;
   height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 
 .map-legend {
   position: absolute;
-  bottom: 5%;
-  right: 5%;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 2% 3%;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
-  max-width: 40%; /* Added max-width */
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-  font-size: 0.85rem;
-  color: #333;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #2c3e50;
 }
 
 .legend-item:last-child {
   margin-bottom: 0;
 }
 
-.legend-marker {
-  width: 10px;
-  height: 10px;
+.legend-icon {
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  display: inline-block;
-  border: 1px solid white;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+  border: 2px solid white;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }
 
-.legend-marker.hq {
-  background-color: blue;
+.legend-icon.hq {
+  background-color: #4D9948;
 }
 
-.legend-marker.destination {
+.legend-icon.destination {
   background-color: #FF5722;
 }
 
-.legend-marker.drone {
+.legend-icon.drone {
   background-color: #2196F3;
 }
 
-/* Tracking timeline styles */
-.tracking-timeline {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+/* Order Details Card */
+.order-details-card {
   padding: 1.5rem;
-  width: 100%; /* Added explicit width */
 }
 
-.tracking-step {
-  display: flex;
-  margin-bottom: 25px;
-  position: relative;
-  width: 100%; /* Added explicit width */
+.order-details-card h3 {
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ecf0f1;
 }
 
-.tracking-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 10%; /* Changed from fixed 40px to 10% */
-  max-width: 40px; /* Added max-width */
-  position: relative;
+.order-info {
+  display: grid;
+  gap: 1rem;
 }
 
-.step-circle {
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background-color: #f0f0f0;
-  border: 2px solid #ddd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.step-circle.active {
-  background-color: #4D9948;
-  border-color: #4D9948;
-}
-
-.step-line {
-  width: 2px;
-  height: 40px;
-  background-color: #ddd;
-  position: absolute;
-  top: 25px;
-}
-
-.step-line.active {
-  background-color: #4D9948;
-}
-
-.step-details {
-  margin-left: 15px;
-  flex-grow: 1;
-  width: 85%; /* Added width */
-}
-
-.step-name {
-  font-weight: bold;
-  color: #333;
-}
-
-.tracking-step.completed .step-name {
-  color: #4D9948;
-}
-
-/* Product details */
-.product-details {
-  background-color: white;
+.info-item {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 1.5rem;
-  width: 100%; /* Added explicit width */
 }
 
-.product-details h3 {
-  color: #3E1314;
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #eee;
-  font-size: 1.2rem;
-  width: 100%; /* Added explicit width */
+.info-item .label {
+  color: #6c757d;
+  font-weight: 500;
 }
 
-.product-item {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  width: 100%; /* Added explicit width */
+.info-item .value {
+  color: #2c3e50;
+  font-weight: 400;
+  word-break: break-word;
 }
 
-.product-item:last-child {
-  border-bottom: none;
-}
-
-/* Loading and error states */
-.loading-state, .error-state {
-  max-width: 80%;
-  margin: 3rem auto;
-  background-color: white;
-  padding: 2rem;
-  border-radius: 8px;
+/* Actions */
+.actions {
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  width: 100%; /* Added explicit width */
+  margin-top: 1rem;
 }
 
-.error-state {
-  color: #EF4444;
-}
-
-/* Back button */
-.back-button {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: center;
-  width: 100%; /* Added explicit width */
-}
-
-.back-button button {
-  padding: 0.75rem 1.25rem;
-  background-color: #4D9948;
+.back-btn {
+  background: #3498db;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-weight: 500;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
-  width: auto; /* Changed from fixed to auto */
-  min-width: 30%; /* Added minimum width */
-  max-width: 200px; /* Added maximum width */
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
-.back-button button:hover {
-  background-color: #3E7A3A;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+.back-btn:hover {
+  background: #2980b9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
 }
 
-.status[class="placed"], .status[class*="pending"] {
-  background-color: #FF9800;
-}
-.status[class*="processing"] {
-  background-color: #2196F3;
-}
-.status[class*="dispatched"] {
-  background-color: #9C27B0;
-}
-.status[class*="shipping"], .status[class*="out for delivery"] {
-  background-color: #2196F3;
-}
-.status[class*="delivered"], .status[class*="completed"] {
-  background-color: #4CAF50;
-}
-
-@media (max-width: 992px) {
-  .order-tracking {
-    flex-direction: column;
-    max-width: 95%; /* Increased for smaller screens */
+/* Responsive Design */
+@media (min-width: 768px) {
+  .track-content {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "status map"
+      "details details"
+      "actions actions";
   }
+  
+  .status-card {
+    grid-area: status;
+  }
+  
+  .map-section {
+    grid-area: map;
+  }
+  
+  .order-details-card {
+    grid-area: details;
+  }
+  
+  .actions {
+    grid-area: actions;
+  }
+  
   .map-container {
-    padding-bottom: 50%; /* Adjusted aspect ratio for smaller screens */
+    height: 350px;
   }
 }
 
-@media (max-width: 768px) {
-  h2 {
+@media (max-width: 767px) {
+  .track-header {
+    padding: 1.5rem 1rem;
+  }
+  
+  .track-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .track-content {
+    padding: 0 0.5rem 1rem;
+  }
+  
+  .status-card,
+  .map-section,
+  .order-details-card {
     padding: 1rem;
   }
-  .order-tracking {
-    padding: 0.75rem;
-    max-width: 98%; /* Further increased for mobile */
+  
+  .info-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
-  .map-container {
-    padding-bottom: 60%; /* Increased aspect ratio for mobile */
-  }
-}
-
-@media (max-width: 576px) {
+  
   .map-legend {
-    position: relative;
-    bottom: auto;
-    right: auto;
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    max-width: 100%; /* Full width on very small screens */
+    bottom: 0.5rem;
+    right: 0.5rem;
+    padding: 0.75rem;
   }
-  .tracking-step {
-    flex-direction: column;
-  }
-  .tracking-indicator {
-    width: 100%;
-    flex-direction: row;
-    margin-bottom: 10px;
-    max-width: 100%; /* Full width on very small screens */
-  }
-  .step-line {
-    width: calc(100% - 40px);
-    height: 2px;
-    top: 12px;
-    left: 25px;
-  }
-  .step-details {
-    margin-left: 0;
-    width: 100%; /* Full width on very small screens */
+  
+  .map-container {
+    height: 300px;
   }
 }

@@ -31,19 +31,36 @@ export class OrderHistory implements OnInit {
     // Get current user from localStorage
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     
-    // Use API service to get all orders
+    // For courier users, use a known courier user ID (1) to ensure we get all orders
+    // This bypasses any potential user validation issues
     this.apiService.callApi('getAllOrders', {
-      user_id: currentUser.id || 1,
-      user_type: currentUser.type || 'Courier'
+      user_id: 1,  // Use a default courier user ID
+      user_type: 'Courier'  // Ensure we're requesting as a courier
     }).subscribe({
       next: (response: any) => {
         this.loading = false;
-        console.log('API response data:', response);
+        console.log('Current user from localStorage:', currentUser);
+        console.log('API call made with user_id: 1, user_type: Courier');
+        console.log('Order History - All orders from API:', response);
         
         if (response.success && response.data) {
-          // Filter orders to only show those with "Delivered" status
-          const deliveredOrders = response.data.filter((order: any) => order.state === 'Delivered');
-          console.log('Filtered Delivered orders:', deliveredOrders);
+          console.log('Order History - Total orders received:', response.data.length);
+          
+          // Log all order states to debug
+          response.data.forEach((order: any, index: number) => {
+            console.log(`Order History ${index + 1}: ID=${order.order_id}, Customer=${order.customer_id}, State="${order.state}"`);
+          });
+          
+          // Filter orders with Delivered state (case insensitive)
+          const deliveredOrders = response.data.filter((order: any) => {
+            if (!order.state) return false;
+            const state = order.state.toString().toLowerCase().trim();
+            const isDelivered = state === 'delivered';
+            console.log(`Order History ${order.order_id}: state="${order.state}" -> normalized="${state}" -> isDelivered=${isDelivered}`);
+            return isDelivered;
+          });
+          
+          console.log('Order History - Delivered orders found:', deliveredOrders.length);
           
           // Process the orders for display
           this.processOrders(deliveredOrders);

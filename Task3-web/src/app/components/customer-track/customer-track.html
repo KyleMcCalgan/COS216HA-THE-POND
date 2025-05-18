@@ -1,66 +1,98 @@
-<div class="customer-container">
-  <h2>Track Your Order</h2>
+<div class="customer-track-container">
+  <header class="track-header">
+    <h1>Order Tracking</h1>
+    <p class="order-id">Order #{{ orderId }}</p>
+  </header>
+
   <!-- Loading state -->
-  <div *ngIf="loading" class="loading-state">
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
     <p>Loading order details...</p>
   </div>
+
   <!-- Error state -->
-  <div *ngIf="!loading && error" class="error-state">
+  <div *ngIf="!loading && error" class="error-container">
+    <div class="error-icon">⚠️</div>
+    <h3>Unable to Load Order</h3>
     <p>{{ error }}</p>
+    <button routerLink="/customer" class="back-btn">Back to Orders</button>
   </div>
-  <!-- Order details and tracking -->
-  <div *ngIf="!loading && !error && orderDetails" class="order-tracking">
-    <div class="order-summary">
-      <h3>Order #{{ orderId }}</h3>
-      <!-- Removed date pipe formatting -->
-      <p><strong>Status:</strong> <span class="status" [ngClass]="orderDetails.state.toLowerCase()">{{ orderDetails.state }}</span></p>
-    </div>
-<!-- Map section -->
-<div class="map-section">
-  <h3>Live Tracking</h3>
-  <div class="map-container">
-    <div id="customer-map"></div>
-  </div>
-  <div class="map-legend">
-    <div class="legend-item">
-      <span class="legend-marker hq"></span>
-      <span>Headquarters</span>
-    </div>
-    <div class="legend-item">
-      <span class="legend-marker destination"></span>
-      <span>Destination</span>
-    </div>
-    <div class="legend-item">
-      <span class="legend-marker drone"></span>
-      <span>Drone</span>
-    </div>
-  </div>
-</div>
 
-<!-- Tracking timeline -->
-<div class="tracking-timeline">
-  <div *ngFor="let step of trackingSteps; let i = index" class="tracking-step" [ngClass]="{'completed': step.completed}">
-    <div class="tracking-indicator">
-      <div class="step-circle" [ngClass]="{'active': step.completed}"></div>
-      <div *ngIf="i < trackingSteps.length - 1" class="step-line" [ngClass]="{'active': step.completed && trackingSteps[i+1].completed}"></div>
+  <!-- Main content -->
+  <div *ngIf="!loading && !error && orderDetails" class="track-content">
+    <!-- Order Status Card -->
+    <div class="status-card">
+      <div class="status-header">
+        <h3>Delivery Status</h3>
+        <span class="status-badge" [ngClass]="getOrderStatusClass()">
+          {{ getOrderStatus() }}
+        </span>
+      </div>
+      
+      <div class="status-details">
+        <div class="detail-item">
+          <span class="label">Estimated Delivery:</span>
+          <span class="value">{{ getEstimatedDelivery() }}</span>
+        </div>
+        <div class="detail-item" *ngIf="droneDetails">
+          <span class="label">Drone Status:</span>
+          <span class="value">{{ getDroneStatus() }}</span>
+        </div>
+        <div class="detail-item" *ngIf="droneDetails && orderDetails?.state?.toLowerCase() === 'out_for_delivery'">
+          <span class="label">Distance to Destination:</span>
+          <span class="value distance">{{ getDroneDistance() }}</span>
+        </div>
+        <div class="detail-item" *ngIf="droneDetails">
+          <span class="label">Drone Battery:</span>
+          <span class="value">{{ droneDetails.battery_level }}%</span>
+        </div>
+      </div>
     </div>
-    <div class="step-details">
-      <div class="step-name">{{ step.name }}</div>
-      <!-- Removed timestamp display -->
-    </div>
-  </div>
-</div>
 
-<!-- Product details -->
-<div class="product-details" *ngIf="orderDetails.products && orderDetails.products.length">
-  <h3>Products in this Order</h3>
-  <div *ngFor="let product of orderDetails.products" class="product-item">
-    <p><strong>{{ product.title || product.name || 'Unknown Product' }}</strong> ({{ product.quantity || 1 }}x)</p>
-  </div>
-</div>
-  </div>
-  <!-- Back button -->
-  <div class="back-button">
-    <button routerLink="/customer">Back to My Orders</button>
+    <!-- Map Section -->
+    <div class="map-section">
+      <h3>Live Location</h3>
+      <div class="map-container">
+        <div id="customer-map"></div>
+        <div class="map-legend">
+          <div class="legend-item">
+            <span class="legend-icon hq"></span>
+            <span>Headquarters</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-icon destination"></span>
+            <span>Your Location</span>
+          </div>
+          <div class="legend-item" *ngIf="droneDetails">
+            <span class="legend-icon drone"></span>
+            <span>Delivery Drone</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Details Card -->
+    <div class="order-details-card">
+      <h3>Order Information</h3>
+      <div class="order-info">
+        <div class="info-item">
+          <span class="label">Products:</span>
+          <span class="value">{{ formatProducts() }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Tracking Number:</span>
+          <span class="value">{{ orderDetails.tracking_num }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Delivery Address:</span>
+          <span class="value">{{ orderDetails.destination_latitude }}, {{ orderDetails.destination_longitude }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back to Orders -->
+    <div class="actions">
+      <button routerLink="/customer" class="back-btn">Back to My Orders</button>
+    </div>
   </div>
 </div>

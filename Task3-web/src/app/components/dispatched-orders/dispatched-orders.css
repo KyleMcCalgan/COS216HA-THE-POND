@@ -122,6 +122,17 @@ h2:after {
   color: white;
 }
 
+/* New filter button for returning drones */
+.filter-button.filter-returning {
+  border-color: #9C27B0;
+  color: #9C27B0;
+}
+
+.filter-button.filter-returning.active {
+  background-color: #9C27B0;
+  color: white;
+}
+
 .orders-list {
   display: flex;
   flex-direction: column;
@@ -168,6 +179,16 @@ h2:after {
   background-color: #FF9800;
 }
 
+.order-card.returning:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background-color: #9C27B0;
+}
+
 .order-header {
   display: flex;
   justify-content: space-between;
@@ -200,6 +221,11 @@ h2:after {
 .status-badge.waiting {
   background-color: #FFF3E0;
   color: #E65100;
+}
+
+.status-badge.returning {
+  background-color: #F3E5F5;
+  color: #7B1FA2;
 }
 
 .order-details {
@@ -311,6 +337,12 @@ h2:after {
   border-left: 3px solid #FF9800;
 }
 
+.drone-badge.returning {
+  background-color: #F3E5F5;
+  color: #7B1FA2;
+  border-left: 3px solid #9C27B0;
+}
+
 .drone-badge .drone-status {
   margin-left: 5px;
   padding: 2px 5px;
@@ -319,13 +351,18 @@ h2:after {
   font-weight: bold;
 }
 
-.drone-badge .drone-status.delivering {
+.drone-status.delivering {
   background-color: #2196F3;
   color: white;
 }
 
-.drone-badge .drone-status.waiting {
+.drone-status.waiting {
   background-color: #FF9800;
+  color: white;
+}
+
+.drone-status.returning {
+  background-color: #9C27B0;
   color: white;
 }
 
@@ -358,6 +395,10 @@ h2:after {
 
 .stat-value.waiting {
   color: #FF9800;
+}
+
+.stat-value.returning {
+  color: #9C27B0;
 }
 
 .stat-value.total {

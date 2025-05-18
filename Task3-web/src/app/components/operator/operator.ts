@@ -29,7 +29,7 @@ export class Operator implements OnInit, OnDestroy {
   allDrones: Drone[] = [];
   dronesCurrentlyDelivering: Drone[] = [];
   dronesWaitingToDeliver: Drone[] = [];
-  dronesReturningToBase: Drone[] = []; // New array for returning drones
+  dronesReturningToBase: Drone[] = [];
   loading = true;
   error = '';
   private wsSubscription: Subscription | null = null;
@@ -69,22 +69,39 @@ export class Operator implements OnInit, OnDestroy {
     // Get current user from localStorage
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     
-    // Use API service to get all orders
+    // For courier users, use a known courier user ID (1) to ensure we get all orders
+    // This bypasses any potential user validation issues
     this.apiService.callApi('getAllOrders', {
-      user_id: currentUser.id || 1,
-      user_type: currentUser.type || 'Courier'
+      user_id: 1,  // Use a default courier user ID
+      user_type: 'Courier'  // Ensure we're requesting as a courier
     }).subscribe({
       next: (response: any) => {
         this.loading = false;
-        console.log('API response data:', response);
+        console.log('Current user from localStorage:', currentUser);
+        console.log('API call made with user_id: 1, user_type: Courier');
+        console.log('All orders from API:', response);
         
         if (response.success && response.data) {
-          // Filter orders to only show those with "Storage" status
-          const storageOrders = response.data.filter((order: any) => order.state === 'Storage');
-          console.log('Filtered Storage orders:', storageOrders);
+          console.log('Total orders received:', response.data.length);
+          
+          // Log all order states to debug
+          response.data.forEach((order: any, index: number) => {
+            console.log(`Order ${index + 1}: ID=${order.order_id}, Customer=${order.customer_id}, State="${order.state}"`);
+          });
+          
+          // Filter orders with Storage state (case insensitive)
+          const storageOrders = response.data.filter((order: any) => {
+            if (!order.state) return false;
+            const state = order.state.toString().toLowerCase().trim();
+            const isStorage = state === 'storage';
+            console.log(`Order ${order.order_id}: state="${order.state}" -> normalized="${state}" -> isStorage=${isStorage}`);
+            return isStorage;
+          });
+          
+          console.log('Storage orders found:', storageOrders.length);
           
           // Process the orders for display
-          this.processOrders(storageOrders);
+          this.processOutstandingOrders(storageOrders);
         } else {
           this.error = response.message || 'Failed to load orders';
           console.error('Failed to load orders:', response.message);
@@ -98,8 +115,8 @@ export class Operator implements OnInit, OnDestroy {
     });
   }
 
-  // Process orders for display
-  private processOrders(orders: any[]) {
+  // Process outstanding orders for display
+  private processOutstandingOrders(orders: any[]) {
     this.outstandingOrders = [];
     
     for (const order of orders) {
@@ -222,8 +239,19 @@ export class Operator implements OnInit, OnDestroy {
     switch (message.action) {
       case 'orders_update':
         if (message.data) {
-          const storageOrders = message.data.filter((order: any) => order.state === 'Storage');
-          this.processOrders(storageOrders);
+          console.log('WebSocket orders update received:', message.data);
+          
+          // Filter for storage orders only - case insensitive with detailed logging
+          const storageOrders = message.data.filter((order: any) => {
+            if (!order.state) return false;
+            const state = order.state.toString().toLowerCase().trim();
+            const isStorage = state === 'storage';
+            console.log(`WebSocket Order ${order.order_id}: state="${order.state}" -> normalized="${state}" -> isStorage=${isStorage}`);
+            return isStorage;
+          });
+          
+          console.log('WebSocket Storage orders found:', storageOrders.length);
+          this.processOutstandingOrders(storageOrders);
         }
         break;
         

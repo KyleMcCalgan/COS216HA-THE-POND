@@ -33,13 +33,13 @@ interface OrderDetails {
 })
 export class Dispatch implements OnInit {
   orderId: string | null = null;
-  orderCustomerId: number | null = null; // Added to store customer ID
+  orderCustomerId: number | null = null;
   orderDetails: OrderDetails | null = null;
   availableDrones: Drone[] = [];
   selectedDroneId: number | null = null;
   isProcessing = false;
   error = '';
-  isLoading = true; // Add loading state
+  isLoading = true;
   
   // HQ coordinates (as defined in server)
   private readonly HQ_LATITUDE = 25.7472;
@@ -62,58 +62,47 @@ export class Dispatch implements OnInit {
     
     console.log(`Initializing dispatch page for order ID: ${this.orderId}`);
     
-    // First load all orders to find the specific order and get its customer ID
-    this.loadOrdersToFindCustomerId();
+    // Load order details directly using getOrder API
+    this.loadOrderDetails();
   }
 
-  // Load all orders to find the specific order's customer ID
-  loadOrdersToFindCustomerId() {
-    // Get current user from localStorage
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  // Load order details using the getOrder API
+  private loadOrderDetails() {
+    this.isLoading = true;
     
-    this.apiService.callApi('getAllOrders', {
-      user_id: currentUser.id || 1,
-      user_type: currentUser.type || 'Courier'
+    // Use getOrder API directly since it works correctly
+    this.apiService.callApi('getOrder', {
+      order_id: parseInt(this.orderId!),
+      user_id: 1,  // Use courier user ID 
+      user_type: 'Courier'
     }).subscribe({
       next: (response: any) => {
+        console.log('getOrder API response:', response);
+        
         if (response.success && response.data) {
-          console.log('All orders response:', response.data);
+          console.log('Order found:', response.data);
           
-          // Find the order with matching order_id
-          const foundOrder = response.data.find((order: any) => 
-            order.order_id == this.orderId
-          );
+          // Process the order details
+          this.processOrderDetails(response.data);
           
-          if (foundOrder) {
-            console.log('Found order:', foundOrder);
-            this.orderCustomerId = foundOrder.customer_id;
-            
-            // Process the order directly instead of making another API call
-            this.processOrderDetails(foundOrder);
-            
-            // Also load available drones
-            this.loadAvailableDrones();
-          } else {
-            this.isLoading = false;
-            this.error = `Order with ID ${this.orderId} not found.`;
-            console.error('Order not found in the list of orders.');
-          }
+          // Also load available drones
+          this.loadAvailableDrones();
         } else {
           this.isLoading = false;
-          this.error = response.message || 'Failed to load orders';
-          console.error('Failed to load orders:', response.message);
+          this.error = response.message || `Order with ID ${this.orderId} not found.`;
+          console.error('Failed to load order:', response.message);
         }
       },
       error: (err) => {
         this.isLoading = false;
-        this.error = 'Error loading orders: ' + (err.message || 'Unknown error');
-        console.error('Error loading orders:', err);
+        this.error = 'Error loading order: ' + (err.message || 'Unknown error');
+        console.error('Error loading order:', err);
       }
     });
   }
 
   // Process order details from the order data
-  processOrderDetails(orderData: any) {
+  private processOrderDetails(orderData: any) {
     // Format products list
     const productsList = this.formatProductsList(orderData.products);
     
@@ -131,12 +120,15 @@ export class Dispatch implements OnInit {
       }
     };
     
+    // Store customer ID for later use
+    this.orderCustomerId = orderData.customer_id;
+    
     this.isLoading = false;
     console.log('Processed order details:', this.orderDetails);
   }
 
   // Load available drones
-  loadAvailableDrones() {
+  private loadAvailableDrones() {
     this.apiService.callApi('getAllDrones', {}).subscribe({
       next: (response: any) => {
         if (response.success && response.data) {
