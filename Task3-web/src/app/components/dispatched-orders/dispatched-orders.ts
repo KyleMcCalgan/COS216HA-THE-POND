@@ -198,18 +198,30 @@ export class DispatchedOrders implements OnInit {
     
     console.log(`Found ${returningDrones.length} drones returning to base`);
     
-    // For returning drones, create entries with their current location
+    // For returning drones, create entries with their current location and use drone ID for tracking
     returningDrones.forEach(drone => {
-      // Create a processed order object for returning drone with minimal info
+      // Try to find the last delivered order for this drone
+      // This is a simplified approach - in a real system you'd have better tracking
+      const lastDeliveredOrder = this.allOrders
+        .filter(order => order.state?.toLowerCase() === 'delivered')
+        .sort((a, b) => new Date(b.delivery_date || 0).getTime() - new Date(a.delivery_date || 0).getTime())[0];
+      
+      // Create a processed order object for returning drone
       const returningDroneOrder: Order = {
-        orderId: 0, // No real order ID
+        orderId: lastDeliveredOrder ? lastDeliveredOrder.order_id : 0, // Use last order if available
         orderIdStr: `drone-${drone.id}`, // Use drone ID as identifier for routing
-        products: ["Package delivered"],
+        products: lastDeliveredOrder ? 
+          this.formatProductsList(lastDeliveredOrder.products) : 
+          ["Recently delivered package"],
         status: "Returning to HQ",
         destination: "Headquarters",
-        customer: "N/A - Returning",
-        customerId: 0,
-        trackingNum: `RTN-${drone.id}`,
+        customer: lastDeliveredOrder ? 
+          (lastDeliveredOrder.customer?.username || `Customer #${lastDeliveredOrder.customer_id}`) : 
+          "Recently served customer",
+        customerId: lastDeliveredOrder ? lastDeliveredOrder.customer_id : 0,
+        trackingNum: lastDeliveredOrder ? 
+          lastDeliveredOrder.tracking_num : 
+          `RTN-${drone.id}`,
         droneId: drone.id,
         droneStatus: 'returning'
       };
@@ -220,23 +232,27 @@ export class DispatchedOrders implements OnInit {
     console.log(`Processed ${this.waitingOrders.length} waiting orders, ${this.deliveringOrders.length} delivering orders, and ${this.returningDrones.length} returning drones`);
   }
 
+  // Helper method to format products list
+  private formatProductsList(products: any[]): string[] {
+    if (!products || !Array.isArray(products)) {
+      return ['No products'];
+    }
+    
+    return products.map((p: any) => {
+      if (p.title) {
+        return `${p.title} (${p.quantity || 1}x)`;
+      } else if (p.name) {
+        return `${p.name} (${p.quantity || 1}x)`;
+      } else {
+        return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
+      }
+    });
+  }
+
   // Create a processed order object with all needed fields
   private createProcessedOrder(order: any, droneId: number, status: 'waiting' | 'delivering' | 'returning'): Order {
     // Format products list
-    let productsList: string[] = [];
-    if (order.products && Array.isArray(order.products)) {
-      productsList = order.products.map((p: any) => {
-        if (p.title) {
-          return `${p.title} (${p.quantity || 1}x)`;
-        } else if (p.name) {
-          return `${p.name} (${p.quantity || 1}x)`;
-        } else {
-          return `Product #${p.product_id || p.id || 'Unknown'} (${p.quantity || 1}x)`;
-        }
-      });
-    } else {
-      productsList = ['No products'];
-    }
+    const productsList = this.formatProductsList(order.products);
 
     // Format coordinates
     let lat = order.destination_latitude;
@@ -303,20 +319,11 @@ export class DispatchedOrders implements OnInit {
     // Check if this is a returning drone (will start with 'drone-')
     if (orderId.startsWith('drone-')) {
       const droneId = orderId.split('-')[1];
-      console.log(`This is a returning drone (ID: ${droneId}). Finding last order...`);
+      console.log(`This is a returning drone (ID: ${droneId}). Navigating with drone tracking mode...`);
       
-      // For returning drones, we need to find a delivered order to track
-      // This is a simplification - in a real app, you'd want to track the most recent order
-      const deliveredOrders = this.allOrders.filter(order => order.state === 'Delivered');
-      let orderToTrack = orderId; // Default to drone ID if no order found
-      
-      if (deliveredOrders.length > 0) {
-        // Just use the first delivered order (in real app, find the actual last order)
-        orderToTrack = String(deliveredOrders[0].order_id);
-        console.log(`Using order ID ${orderToTrack} for returning drone tracking`);
-      }
-      
-      this.router.navigate(['/operator/track', orderToTrack]);
+      // For returning drones, pass the drone ID in the route
+      // We'll modify the route to accept a drone mode
+      this.router.navigate(['/operator/track', orderId]);
       return;
     }
     
@@ -333,7 +340,7 @@ export class DispatchedOrders implements OnInit {
         this.router.navigate(['/operator/track', orderId]);
       });
     } else {
-      // For regular "Track Order" button (already delivering or returning), just navigate
+      // For regular "Track Order" button (already delivering), just navigate
       this.router.navigate(['/operator/track', orderId]);
     }
   }

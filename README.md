@@ -25,4 +25,4 @@ DELIVERING: is drone available == false and order ID not null
 
 WAITING_TO_DELIVER is drone available == true and order ID not null
 
-DEAD: is drone available == false and order ID not null and altitude > 30
+DEAD: is drone available == false and order ID not null and altitude > 30 or battery == 0

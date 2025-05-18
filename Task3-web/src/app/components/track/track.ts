@@ -32,7 +32,7 @@ interface DroneDetails {
 }
 
 // Define drone state types
-type DroneState = 'waiting' | 'delivering' | 'returning' | 'delivered' | 'completed';
+type DroneState = 'waiting' | 'delivering' | 'returning' | 'delivered' | 'completed' | 'dead';
 
 @Component({
   selector: 'app-track',
@@ -56,8 +56,9 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   private keyboardEnabled: boolean = false;
   private mapInitialized: boolean = false;
   private updateInterval: any = null;
-  private batteryDepletionInterval: any = null; // New interval for battery depletion
+  private batteryDepletionInterval: any = null;
   private errorMessage: string | null = null;
+  private isDroneDead: boolean = false; // Track if drone has died
 
   // Location coordinates
   //---------------------------------------------------
@@ -233,8 +234,13 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
               this.orderDetails.droneId = this.droneDetails.id;
             }
             
-            // Start battery depletion if the drone is in use
-            this.startBatteryDepletion();
+            // Check if drone is dead (battery 0 and altitude > 30)
+            this.checkDroneHealth();
+            
+            // Start battery depletion if the drone is in use and not dead
+            if (!this.isDroneDead) {
+              this.startBatteryDepletion();
+            }
             
             // Determine if drone is delivering or returning
             this.determineDroneState();
@@ -245,8 +251,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
             // Update or initialize the map with drone marker
             this.updateMapWithDronePosition();
             
-            // Enable keyboard controls if the drone is not returning, delivered, or completed
-            this.keyboardEnabled = this.droneState === 'delivering' || this.droneState === 'returning';
+            // Enable keyboard controls if the drone is not returning, delivered, completed, or dead
+            this.keyboardEnabled = !this.isDroneDead && (this.droneState === 'delivering' || this.droneState === 'returning');
           } 
           // If we didn't find a drone assigned to this order, check if any drone is returning
           else {
@@ -282,8 +288,13 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
                 this.orderDetails.droneId = this.droneDetails.id;
               }
               
-              // Start battery depletion if the drone is in use
-              this.startBatteryDepletion();
+              // Check if drone is dead
+              this.checkDroneHealth();
+              
+              // Start battery depletion if the drone is in use and not dead
+              if (!this.isDroneDead) {
+                this.startBatteryDepletion();
+              }
               
               // Set state to returning
               this.droneState = 'returning';
@@ -294,8 +305,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
               // Update or initialize the map with drone marker
               this.updateMapWithDronePosition();
               
-              // Enable keyboard controls for returning drone
-              this.keyboardEnabled = true;
+              // Enable keyboard controls for returning drone if not dead
+              this.keyboardEnabled = !this.isDroneDead;
             } else {
               this.errorMessage = 'No drone found for this order, and no returning drones';
               console.error(this.errorMessage);
@@ -315,24 +326,134 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
+   * Check if the drone is dead based on battery and altitude
+   */
+  private checkDroneHealth() {
+    if (!this.droneDetails) return;
+    
+    // Check if drone is dead (battery 0 and altitude > 30)
+    const isDead = this.droneDetails.battery_level <= 0 && this.droneDetails.altitude > 30;
+    
+    if (isDead && !this.isDroneDead) {
+      this.isDroneDead = true;
+      this.droneState = 'dead';
+      this.keyboardEnabled = false;
+      
+      // Clear any existing intervals
+      if (this.batteryDepletionInterval) {
+        clearInterval(this.batteryDepletionInterval);
+        this.batteryDepletionInterval = null;
+      }
+      
+      console.log('Drone is dead - initiating death sequence');
+      this.handleDroneDeath();
+    }
+  }
+
+  /**
+   * Handle drone death sequence
+   */
+  private handleDroneDeath() {
+    if (!this.droneDetails || !this.orderDetails) return;
+    
+    // Show alert about drone death
+    window.alert(`⚠️ DRONE MALFUNCTION ⚠️\n\nDrone #${this.droneDetails.id} has suffered a critical failure!\nBattery depleted and altitude exceeded safe limits.\n\nThe order will be returned to storage for reassignment.`);
+    
+    // Step 1: Update the order back to storage state
+    this.apiService.callApi('updateOrder', {
+      customer_id: this.orderDetails.customerId,
+      order_id: this.orderDetails.orderId,
+      state: 'Storage'
+    }).subscribe({
+      next: (orderResponse: any) => {
+        if (orderResponse.success) {
+          console.log('Order returned to storage successfully:', orderResponse.data);
+        } else {
+          console.error('Failed to return order to storage:', orderResponse.message);
+        }
+      },
+      error: (err) => {
+        console.error('Error returning order to storage:', err);
+      }
+    });
+    
+    // Step 2: Update drone to dead state
+    this.apiService.callApi('updateDrone', {
+      id: this.droneDetails.id,
+      battery_level: 0,
+      is_available: false,
+      order_id: null,
+      altitude: 0,
+      latest_latitude: -this.droneDetails.latest_latitude, // Convert to positive for API
+      latest_longitude: this.droneDetails.latest_longitude
+    }).subscribe({
+      next: (droneResponse: any) => {
+        if (droneResponse.success) {
+          console.log('Drone updated to dead state successfully:', droneResponse.data);
+          
+          // Update local drone details
+          this.droneDetails!.battery_level = 0;
+          this.droneDetails!.is_available = false;
+          this.droneDetails!.order_id = null;
+          this.droneDetails!.altitude = 0;
+          
+          // Update map to show drone at ground level (crashed)
+          this.updateDronePosition();
+          
+          // Disable all further operations
+          this.keyboardEnabled = false;
+          
+          // Clear all intervals
+          if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+          }
+          
+          // Set error message to indicate drone is dead
+          this.errorMessage = 'Drone has crashed and is no longer operational. Order returned to storage.';
+          
+        } else {
+          console.error('Failed to update drone to dead state:', droneResponse.message);
+        }
+      },
+      error: (err) => {
+        console.error('Error updating drone to dead state:', err);
+      }
+    });
+  }
+
+  /**
    * Start or restart the battery depletion timer
    */
   private startBatteryDepletion() {
     if (this.batteryDepletionInterval) {
       clearInterval(this.batteryDepletionInterval);
     }
-    if (this.droneDetails && (this.droneState === 'delivering' || this.droneState === 'returning')) {
+    
+    // Only start battery depletion if drone is not dead and is actively being used
+    if (this.droneDetails && !this.isDroneDead && (this.droneState === 'delivering' || this.droneState === 'returning')) {
       this.batteryDepletionInterval = setInterval(() => {
-        if (this.droneDetails && this.droneDetails.battery_level > 0) {
+        if (this.droneDetails && this.droneDetails.battery_level > 0 && !this.isDroneDead) {
           this.droneDetails.battery_level -= 1;
+          
+          // Check if battery reached 0
           if (this.droneDetails.battery_level <= 0) {
             this.droneDetails.battery_level = 0;
-            this.keyboardEnabled = false; // Disable movement if battery is depleted
-            clearInterval(this.batteryDepletionInterval);
-            this.errorMessage = 'Drone battery depleted. Please return to HQ.';
-            console.warn(this.errorMessage);
+            
+            // Set altitude to a high value to trigger death condition
+            this.droneDetails.altitude = 35; // Above 30m threshold
+            
+            // Check drone health which will trigger death sequence
+            this.checkDroneHealth();
+            
+            // Update drone in database immediately
+            this.updateDroneInDatabase(this.droneDetails.latest_latitude, this.droneDetails.latest_longitude);
+            
+            console.warn('Drone battery depleted! Initiating emergency landing...');
+          } else {
+            // Regular battery update
+            this.updateDroneInDatabase(this.droneDetails.latest_latitude, this.droneDetails.latest_longitude);
           }
-          this.updateDroneInDatabase(this.droneDetails.latest_latitude, this.droneDetails.latest_longitude);
         }
       }, this.BATTERY_DEPLETION_INTERVAL_MS);
     }
@@ -343,6 +464,12 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    */
   private determineDroneState() {
     if (!this.droneDetails || !this.orderDetails) return;
+    
+    // Check if drone is dead first
+    if (this.isDroneDead) {
+      this.droneState = 'dead';
+      return;
+    }
     
     const isDroneAssignedToOrder = this.droneDetails.order_id != null;
     const isDroneAvailable = this.droneDetails.is_available;
@@ -453,6 +580,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       case 'returning': return 'RETURNING TO BASE';
       case 'delivered': return 'DELIVERED';
       case 'completed': return 'COMPLETED';
+      case 'dead': return 'DRONE CRASHED';
       default: return 'UNKNOWN';
     }
   }
@@ -467,6 +595,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       case 'returning': return 'Drone has completed the delivery and is returning to base. Use WASD keys to navigate.';
       case 'delivered': return 'Drone has arrived at the delivery destination. Preparing to return to base.';
       case 'completed': return 'Drone has returned to base and completed the mission.';
+      case 'dead': return 'Drone has crashed due to battery failure. Order returned to storage.';
       default: return '';
     }
   }
@@ -481,6 +610,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       case 'returning': return 'Drone has already delivered the package';
       case 'delivered': return 'Package has been delivered';
       case 'completed': return 'Mission completed';
+      case 'dead': return 'Mission failed - drone crashed';
       default: return 'Unknown';
     }
   }
@@ -633,21 +763,38 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     if (!this.map) return;
     try {
       let droneIcon: L.Icon | L.DivIcon;
-      try {
-        droneIcon = L.icon({
-          iconUrl: 'assets/drone-icon.png',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          popupAnchor: [0, -16]
+      
+      // Use different icon based on drone state
+      if (this.droneState === 'dead') {
+        // Red X for crashed drone
+        droneIcon = L.divIcon({
+          className: 'crashed-drone-marker',
+          html: '<div style="background-color: #dc3545; color: white; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">✕</div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         });
-      } catch (e) {
-        console.warn('Drone icon not found, using default marker:', e);
-        droneIcon = new L.Icon.Default();
+      } else {
+        // Try to use custom drone image, fallback to icon if image fails
+        try {
+          droneIcon = L.icon({
+            iconUrl: 'assets/drone-icon.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+          });
+        } catch (e) {
+          console.warn('Drone icon not found, using default marker:', e);
+          droneIcon = new L.Icon.Default();
+        }
       }
+      
+      const popupText = this.droneState === 'dead' 
+        ? `Drone ID: ${this.orderDetails?.droneId || 'Unknown'} - CRASHED`
+        : `Drone ID: ${this.orderDetails?.droneId || 'Unknown'}`;
       
       this.droneMarker = L.marker(this.droneCoordinates, { icon: droneIcon })
         .addTo(this.map)
-        .bindPopup(`Drone ID: ${this.orderDetails?.droneId || 'Unknown'}`);
+        .bindPopup(popupText);
       
       console.log(`Drone marker added at: ${this.droneCoordinates}`);
     } catch (error) {
@@ -664,6 +811,19 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       this.updateDroneCoordinates();
       if (this.droneMarker) {
         this.droneMarker.setLatLng(this.droneCoordinates);
+        
+        // Update icon if drone state changed to dead
+        if (this.droneState === 'dead') {
+          const crashedIcon = L.divIcon({
+            className: 'crashed-drone-marker',
+            html: '<div style="background-color: #dc3545; color: white; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">✕</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+          this.droneMarker.setIcon(crashedIcon);
+          this.droneMarker.setPopupContent(`Drone ID: ${this.orderDetails?.droneId || 'Unknown'} - CRASHED`);
+        }
+        
         console.log(`Drone marker updated to: ${this.droneCoordinates}`);
       } else {
         this.addDroneMarker();
@@ -715,7 +875,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   //---------------------------------------------------
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
-    if (!this.keyboardEnabled || !this.droneDetails || 
+    if (!this.keyboardEnabled || !this.droneDetails || this.isDroneDead ||
         (this.droneState !== 'delivering' && this.droneState !== 'returning')) return;
     
     let latChange = 0;
@@ -740,6 +900,13 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     
+    // Check battery level before allowing movement
+    if (this.droneDetails.battery_level <= 0) {
+      this.errorMessage = 'Cannot move drone: Battery depleted';
+      console.warn(this.errorMessage);
+      return;
+    }
+    
     console.log(`Moving drone to: ${newLatitude}, ${newLongitude}`);
     this.updateDroneInDatabase(newLatitude, newLongitude);
   }
@@ -748,7 +915,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    * Update drone position in the database
    */
   private updateDroneInDatabase(latitude: number, longitude: number): void {
-    if (!this.droneDetails) return;
+    if (!this.droneDetails || this.isDroneDead) return;
+    
     // Ensure latitude is negative when sending to the database (convert back to positive for API)
     const apiLatitude = latitude < 0 ? -latitude : latitude;
     
@@ -758,7 +926,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       latest_longitude: longitude,
       altitude: this.droneDetails.altitude,
       battery_level: this.droneDetails.battery_level,
-      is_available: this.droneDetails.is_available
+      is_available: this.droneDetails.is_available,
+      order_id: this.droneDetails.order_id
     }).subscribe({
       next: (response: any) => {
         if (response.success) {
@@ -771,6 +940,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
           this.droneDetails!.latest_longitude = longitude;
           this.updateDronePosition();
           
+          // Check if drone reached destination while delivering
           if (this.droneState === 'delivering' && this.orderDetails) {
             if (this.isAtDestination(
               adjustedLatitude, 
@@ -780,7 +950,9 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
             )) {
               this.handleDeliveryCompleted();
             }
-          } else if (this.droneState === 'returning') {
+          } 
+          // Check if drone reached HQ while returning
+          else if (this.droneState === 'returning') {
             if (this.isAtHQ(adjustedLatitude, longitude)) {
               console.log('Drone has reached HQ! Completing return process...');
               this.handleReturnCompleted();
@@ -789,6 +961,11 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
               const lngDiff = Math.abs(longitude - this.HQlng);
               console.log(`Distance to HQ: lat=${latDiff}, lng=${lngDiff}`);
             }
+          }
+          
+          // Clear any previous error messages on successful movement
+          if (this.errorMessage && this.errorMessage.includes('Cannot move drone')) {
+            this.errorMessage = null;
           }
         } else {
           this.errorMessage = 'Failed to update drone position: ' + response.message;
@@ -806,7 +983,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    * Handle when the drone has arrived at the delivery destination
    */
   private handleDeliveryCompleted(): void {
-    if (!this.droneDetails || !this.orderDetails) return;
+    if (!this.droneDetails || !this.orderDetails || this.isDroneDead) return;
     
     window.alert(`Package delivered successfully to ${this.orderDetails.customer}! Please fly the drone back to headquarters.`);
     this.droneState = 'delivered';
@@ -826,9 +1003,11 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
           this.droneDetails!.order_id = null;
           
           setTimeout(() => {
-            this.droneState = 'returning';
-            this.keyboardEnabled = true;
-            console.log('Drone state changed to: returning');
+            if (!this.isDroneDead) {
+              this.droneState = 'returning';
+              this.keyboardEnabled = true;
+              console.log('Drone state changed to: returning');
+            }
           }, 1000); // 1 second delay
         } else {
           this.errorMessage = 'Failed to update drone for return journey: ' + response.message;
@@ -865,13 +1044,13 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    * Handle when the drone arrives back at HQ
    */
   private handleReturnCompleted(): void {
-    if (!this.droneDetails) return;
+    if (!this.droneDetails || this.isDroneDead) return;
     
     window.alert('Drone has returned to headquarters successfully!');
     this.droneState = 'completed';
     this.keyboardEnabled = false;
     
-    // Stop periodic updates
+    // Stop all intervals
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
       this.updateInterval = null;

@@ -282,6 +282,18 @@ h2 {
   background-color: #3E1314;
 }
 
+/* New state color for dead drone */
+.state-dead {
+  background-color: #dc3545;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,.1) 10px,
+    rgba(255,255,255,.1) 20px
+  );
+}
+
 /* Drone status card */
 .drone-status-card {
   background-color: white;
@@ -292,6 +304,12 @@ h2 {
   margin-bottom: 1rem;
 }
 
+/* Dead drone warning styling */
+.drone-status-card.dead {
+  border: 3px solid #dc3545;
+  background-color: #fff5f5;
+}
+
 .drone-status-card h3 {
   color: #3E1314;
   margin-top: 0;
@@ -299,6 +317,19 @@ h2 {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #eee;
   font-size: 1.2rem;
+}
+
+/* Dead drone header */
+.drone-status-card.dead h3 {
+  color: #dc3545;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.drone-status-card.dead h3::before {
+  content: "⚠️";
+  font-size: 1.5rem;
 }
 
 .state-badge {
@@ -326,6 +357,24 @@ h2 {
   background-color: #3E1314;
 }
 
+/* Dead drone state badge */
+.state-badge.state-dead {
+  background-color: #dc3545;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* Battery indicator */
 .battery-indicator {
   display: flex;
@@ -339,6 +388,52 @@ h2 {
   background-color: #4CAF50;
   border-radius: 0.25rem;
   max-width: 100px;
+  transition: all 0.3s ease;
+}
+
+/* Battery level color coding */
+.battery-level.critical {
+  background-color: #dc3545;
+  animation: blink 1s infinite;
+}
+
+.battery-level.low {
+  background-color: #ff9800;
+}
+
+.battery-level.medium {
+  background-color: #ffeb3b;
+}
+
+.battery-level.high {
+  background-color: #4CAF50;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Dead drone battery indicator */
+.battery-indicator.dead {
+  opacity: 0.5;
+}
+
+.battery-indicator.dead .battery-level {
+  background-color: #6c757d;
+  width: 0 !important;
+}
+
+.battery-indicator.dead::after {
+  content: "DEPLETED";
+  color: #dc3545;
+  font-weight: bold;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
 }
 
 /* Responsive styles */
@@ -383,4 +478,82 @@ h2 {
     flex-direction: column;
     gap: 0.25rem;
   }
+}
+
+/* Dead drone warning overlay */
+.dead-drone-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
+}
+
+.dead-drone-warning {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 1rem;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 3px solid #dc3545;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dead-drone-warning .warning-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: shake 1s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.dead-drone-warning h3 {
+  color: #dc3545;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.dead-drone-warning p {
+  color: #333;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.dead-drone-warning ul {
+  text-align: left;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.dead-drone-warning li {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.dead-drone-warning strong {
+  color: #dc3545;
 }
