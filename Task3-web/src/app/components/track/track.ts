@@ -12,7 +12,7 @@ interface OrderDetails {
   customer: string;
   destination: { latitude: number; longitude: number };
   droneId: number;
-  orderId: string | number;
+  orderId: string | number | null;
   customerId: number;
   trackingNum: string;
 }
@@ -45,7 +45,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   //---------------------------------------------------
   // PROPERTIES
   //---------------------------------------------------
-  orderId: string | null = null;
+  droneId: string | null = null;
   orderDetails: OrderDetails | null = null;
   droneDetails: DroneDetails | null = null;
   droneState: DroneState = 'delivering'; // Default state
@@ -88,19 +88,30 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    * Initialize the component properties
    */
   ngOnInit() {
-    // Get order ID from route parameters
-    this.orderId = this.route.snapshot.paramMap.get('orderId');
+    // Get drone ID from route parameters (could be order_id for backward compatibility)
+    const routeParam = this.route.snapshot.paramMap.get('orderId');
     
-    if (!this.orderId) {
-      this.errorMessage = 'No order ID provided';
+    if (!routeParam) {
+      this.errorMessage = 'No drone/order ID provided';
       console.error(this.errorMessage);
       return;
     }
 
+    // Check if this is a drone ID (starts with 'drone-') or a regular order ID
+    if (routeParam.startsWith('drone-')) {
+      this.droneId = routeParam.split('-')[1];
+      console.log(`Tracking drone ID: ${this.droneId}`);
+    } else {
+      // For backward compatibility, if it's a regular number, treat it as order ID
+      console.log(`Tracking by order ID (legacy): ${routeParam}`);
+      this.findDroneByOrderId(routeParam);
+      return;
+    }
+
     console.log(`HQ coordinates: (${this.HQlat}, ${this.HQlng})`);
-    console.log(`Fetching data for order ID: ${this.orderId}`);
+    console.log(`Fetching data for drone ID: ${this.droneId}`);
     
-    this.loadOrderAndDroneData();
+    this.loadDroneAndOrderData();
     
     // Set up automatic refreshing
     this.updateInterval = setInterval(() => {
@@ -109,47 +120,168 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Fetch order and drone data from API
+   * Find drone by order ID (for backward compatibility)
    */
-  private loadOrderAndDroneData() {
-    // Get current user from localStorage
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    // First fetch all orders to get the specific order details
-    this.apiService.callApi('getAllOrders', {
-      user_id: currentUser.id || 1,
-      user_type: currentUser.type || 'Courier'
-    }).subscribe({
-      next: (ordersResponse: any) => {
-        if (ordersResponse.success && ordersResponse.data) {
-          console.log('All orders response:', ordersResponse.data);
+  private findDroneByOrderId(orderId: string) {
+    this.apiService.callApi('getAllDrones', {}).subscribe({
+      next: (dronesResponse: any) => {
+        if (dronesResponse.success && dronesResponse.data) {
+          const foundDrone = dronesResponse.data.find((drone: any) => {
+            const droneOrderId = drone.order_id || drone.Order_ID;
+            return droneOrderId == orderId;
+          });
           
-          // Find the order with matching order_id
-          const foundOrder = ordersResponse.data.find((order: any) => 
-            order.order_id == this.orderId
-          );
-          
-          if (foundOrder) {
-            console.log('Found order:', foundOrder);
-            this.processOrderDetails(foundOrder);
+          if (foundDrone) {
+            this.droneId = foundDrone.id.toString();
+            this.loadDroneAndOrderData();
             
-            // Now fetch all drones to find the one assigned to this order
-            this.fetchDroneData();
+            // Set up automatic refreshing
+            this.updateInterval = setInterval(() => {
+              this.fetchDroneData();
+            }, 10000);
           } else {
-            this.errorMessage = `Order with ID ${this.orderId} not found`;
+            this.errorMessage = `No drone found for order ID ${orderId}`;
             console.error(this.errorMessage);
             this.isLoading = false;
           }
         } else {
-          this.errorMessage = 'Failed to load orders: ' + (ordersResponse.message || 'Unknown error');
+          this.errorMessage = 'Failed to load drones: ' + (dronesResponse.message || 'Unknown error');
           console.error(this.errorMessage);
           this.isLoading = false;
         }
       },
       error: (err) => {
-        this.errorMessage = 'Error loading orders: ' + err.message;
-        console.error('Error loading orders:', err);
+        this.errorMessage = 'Error loading drones: ' + err.message;
+        console.error('Error loading drones:', err);
         this.isLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Fetch drone and order data from API
+   */
+  private loadDroneAndOrderData() {
+    if (!this.droneId) {
+      this.errorMessage = 'No drone ID available';
+      this.isLoading = false;
+      return;
+    }
+
+    // Get current user from localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    // First, get all drones to find our specific drone
+    this.apiService.callApi('getAllDrones', {}).subscribe({
+      next: (dronesResponse: any) => {
+        if (dronesResponse.success && dronesResponse.data) {
+          console.log('All drones response:', dronesResponse.data);
+          
+          // Find the specific drone by ID
+          const foundDrone = dronesResponse.data.find((drone: any) => 
+            drone.id == this.droneId
+          );
+          
+          if (foundDrone) {
+            console.log('Found drone:', foundDrone);
+            this.processDroneDetails(foundDrone);
+            
+            // If the drone has an order ID, fetch the order details
+            const droneOrderId = foundDrone.order_id || foundDrone.Order_ID;
+            if (droneOrderId) {
+              this.fetchOrderData(droneOrderId);
+            } else {
+              // No order ID - this is a returning drone or completed drone
+              console.log('Drone has no order ID - likely returning or completed');
+              this.createDummyOrderDetails();
+              this.isLoading = false;
+            }
+          } else {
+            this.errorMessage = `Drone with ID ${this.droneId} not found`;
+            console.error(this.errorMessage);
+            this.isLoading = false;
+          }
+        } else {
+          this.errorMessage = 'Failed to load drones: ' + (dronesResponse.message || 'Unknown error');
+          console.error(this.errorMessage);
+          this.isLoading = false;
+        }
+      },
+      error: (err) => {
+        this.errorMessage = 'Error loading drones: ' + err.message;
+        console.error('Error loading drones:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Process drone details from API data
+   */
+  private processDroneDetails(droneData: any) {
+    // Convert latitude to negative for southern hemisphere
+    const rawLatitude = parseFloat(droneData.latest_latitude) || 0;
+    const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
+    
+    this.droneDetails = {
+      id: parseInt(droneData.id),
+      is_available: droneData.is_available === true,
+      latest_latitude: adjustedLatitude,
+      latest_longitude: parseFloat(droneData.latest_longitude) || 0,
+      altitude: parseFloat(droneData.altitude) || 0,
+      battery_level: parseInt(droneData.battery_level) || 100,
+      current_operator_id: droneData.current_operator_id,
+      order_id: droneData.order_id || droneData.Order_ID
+    };
+    
+    console.log('Processed drone details with adjusted latitude:', this.droneDetails);
+    
+    // Check if drone is dead (battery 0 and altitude > 30)
+    this.checkDroneHealth();
+    
+    // Start battery depletion if the drone is in use and not dead
+    if (!this.isDroneDead) {
+      this.startBatteryDepletion();
+    }
+    
+    // Determine drone state
+    this.determineDroneState();
+    
+    // Update drone coordinates
+    this.updateDroneCoordinates();
+    
+    // Update or initialize the map with drone marker
+    this.updateMapWithDronePosition();
+    
+    // Enable keyboard controls if appropriate
+    this.keyboardEnabled = !this.isDroneDead && 
+      (this.droneState === 'delivering' || this.droneState === 'returning');
+  }
+
+  /**
+   * Fetch order data by order ID
+   */
+  private fetchOrderData(orderId: number) {
+    this.apiService.callApi('getOrder', {
+      order_id: orderId,
+      user_id: 1,
+      user_type: 'Courier'
+    }).subscribe({
+      next: (orderResponse: any) => {
+        this.isLoading = false;
+        
+        if (orderResponse.success && orderResponse.data) {
+          console.log('Found order:', orderResponse.data);
+          this.processOrderDetails(orderResponse.data);
+        } else {
+          console.log('Order not found, creating default order details');
+          this.createDummyOrderDetails();
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        console.log('Error fetching order, creating default order details:', err);
+        this.createDummyOrderDetails();
       }
     });
   }
@@ -180,7 +312,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     
     // Create order details object
     this.orderDetails = {
-      orderId: this.orderId || '0',
+      orderId: orderData.order_id || null,
       products: productsList,
       customer: orderData.customer?.username || `Customer #${orderData.customer_id}`,
       customerId: orderData.customer_id,
@@ -189,142 +321,59 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
         latitude: adjustedLatitude,
         longitude: parseFloat(orderData.destination_longitude) || 0
       },
-      droneId: 0 // Will be updated when we find the drone
+      droneId: this.droneDetails ? this.droneDetails.id : parseInt(this.droneId || '0')
     };
     
     console.log('Processed order details with adjusted latitude:', this.orderDetails);
   }
 
   /**
-   * Fetch drones data from API
+   * Create dummy order details for drones without orders (returning/completed)
+   */
+  private createDummyOrderDetails() {
+    // For returning drones, we'll create placeholder order details
+    this.orderDetails = {
+      orderId: null,
+      products: ['Recently delivered package'],
+      customer: 'Recently served customer',
+      customerId: 0,
+      trackingNum: `RTN-${this.droneId}`,
+      destination: {
+        latitude: this.HQlat,
+        longitude: this.HQlng
+      },
+      droneId: this.droneDetails ? this.droneDetails.id : parseInt(this.droneId || '0')
+    };
+    
+    console.log('Created dummy order details for returning drone:', this.orderDetails);
+  }
+
+  /**
+   * Fetch drones data from API (for periodic updates)
    */
   private fetchDroneData() {
+    if (!this.droneId) return;
+    
     this.apiService.callApi('getAllDrones', {}).subscribe({
       next: (dronesResponse: any) => {
-        this.isLoading = false;
         if (dronesResponse.success && dronesResponse.data) {
-          console.log('All drones response:', dronesResponse.data);
+          const foundDrone = dronesResponse.data.find((drone: any) => 
+            drone.id == this.droneId
+          );
           
-          // Find the drone with this order ID
-          const foundDrone = dronesResponse.data.find((drone: any) => {
-            const droneOrderId = drone.order_id || drone.Order_ID;
-            return droneOrderId == this.orderId;
-          });
-          
-          // If we found a drone assigned to this order
           if (foundDrone) {
-            console.log('Found drone for this order:', foundDrone);
-            // Convert latitude to negative for southern hemisphere
-            const rawLatitude = parseFloat(foundDrone.latest_latitude) || 0;
-            const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
-            
-            this.droneDetails = {
-              id: parseInt(foundDrone.id),
-              is_available: foundDrone.is_available === true,
-              latest_latitude: adjustedLatitude,
-              latest_longitude: parseFloat(foundDrone.latest_longitude) || 0,
-              altitude: parseFloat(foundDrone.altitude) || 0,
-              battery_level: parseInt(foundDrone.battery_level) || 100, // Default to 100% if not provided
-              current_operator_id: foundDrone.current_operator_id,
-              order_id: foundDrone.order_id || foundDrone.Order_ID
-            };
-            
-            // Update order details with drone ID
-            if (this.orderDetails) {
-              this.orderDetails.droneId = this.droneDetails.id;
-            }
-            
-            // Check if drone is dead (battery 0 and altitude > 30)
-            this.checkDroneHealth();
-            
-            // Start battery depletion if the drone is in use and not dead
-            if (!this.isDroneDead) {
-              this.startBatteryDepletion();
-            }
-            
-            // Determine if drone is delivering or returning
-            this.determineDroneState();
-            
-            // Update drone coordinates
-            this.updateDroneCoordinates();
-            
-            // Update or initialize the map with drone marker
-            this.updateMapWithDronePosition();
-            
-            // Enable keyboard controls if the drone is not returning, delivered, completed, or dead
-            this.keyboardEnabled = !this.isDroneDead && (this.droneState === 'delivering' || this.droneState === 'returning');
-          } 
-          // If we didn't find a drone assigned to this order, check if any drone is returning
-          else {
-            // Get all drones that are not available, with no order ID (returning drones)
-            const returningDrones = dronesResponse.data.filter((drone: any) => {
-              const droneOrderId = drone.order_id || drone.Order_ID;
-              return !drone.is_available && !droneOrderId;
-            });
-            
-            console.log('Returning drones:', returningDrones);
-            
-            // If we have any returning drones, assume it's for this order
-            if (returningDrones.length > 0) {
-              const returningDrone = returningDrones[0];
-              
-              // Convert latitude to negative for southern hemisphere
-              const rawLatitude = parseFloat(returningDrone.latest_latitude) || 0;
-              const adjustedLatitude = rawLatitude > 0 ? -rawLatitude : rawLatitude;
-              
-              this.droneDetails = {
-                id: parseInt(returningDrone.id),
-                is_available: returningDrone.is_available === true,
-                latest_latitude: adjustedLatitude,
-                latest_longitude: parseFloat(returningDrone.latest_longitude) || 0,
-                altitude: parseFloat(returningDrone.altitude) || 0,
-                battery_level: parseInt(returningDrone.battery_level) || 100, // Default to 100% if not provided
-                current_operator_id: returningDrone.current_operator_id,
-                order_id: null
-              };
-              
-              // Update order details with drone ID
-              if (this.orderDetails) {
-                this.orderDetails.droneId = this.droneDetails.id;
-              }
-              
-              // Check if drone is dead
-              this.checkDroneHealth();
-              
-              // Start battery depletion if the drone is in use and not dead
-              if (!this.isDroneDead) {
-                this.startBatteryDepletion();
-              }
-              
-              // Set state to returning
-              this.droneState = 'returning';
-              
-              // Update drone coordinates
-              this.updateDroneCoordinates();
-              
-              // Update or initialize the map with drone marker
-              this.updateMapWithDronePosition();
-              
-              // Enable keyboard controls for returning drone if not dead
-              this.keyboardEnabled = !this.isDroneDead;
-            } else {
-              this.errorMessage = 'No drone found for this order, and no returning drones';
-              console.error(this.errorMessage);
-            }
+            this.processDroneDetails(foundDrone);
           }
-        } else {
-          this.errorMessage = 'Failed to load drones: ' + (dronesResponse.message || 'Unknown error');
-          console.error(this.errorMessage);
         }
       },
       error: (err) => {
-        this.isLoading = false;
-        this.errorMessage = 'Error loading drones: ' + err.message;
-        console.error('Error loading drones:', err);
+        console.error('Error fetching drone data:', err);
       }
     });
   }
 
+  // ... (rest of the methods remain the same: checkDroneHealth, startBatteryDepletion, etc.)
+  
   /**
    * Check if the drone is dead based on battery and altitude
    */
@@ -359,23 +408,26 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     // Show alert about drone death
     window.alert(`⚠️ DRONE MALFUNCTION ⚠️\n\nDrone #${this.droneDetails.id} has suffered a critical failure!\nBattery depleted and altitude exceeded safe limits.\n\nThe order will be returned to storage for reassignment.`);
     
-    // Step 1: Update the order back to storage state
-    this.apiService.callApi('updateOrder', {
-      customer_id: this.orderDetails.customerId,
-      order_id: this.orderDetails.orderId,
-      state: 'Storage'
-    }).subscribe({
-      next: (orderResponse: any) => {
-        if (orderResponse.success) {
-          console.log('Order returned to storage successfully:', orderResponse.data);
-        } else {
-          console.error('Failed to return order to storage:', orderResponse.message);
+    // Only update order if there was actually an order
+    if (this.orderDetails.orderId) {
+      // Step 1: Update the order back to storage state
+      this.apiService.callApi('updateOrder', {
+        customer_id: this.orderDetails.customerId,
+        order_id: this.orderDetails.orderId,
+        state: 'Storage'
+      }).subscribe({
+        next: (orderResponse: any) => {
+          if (orderResponse.success) {
+            console.log('Order returned to storage successfully:', orderResponse.data);
+          } else {
+            console.error('Failed to return order to storage:', orderResponse.message);
+          }
+        },
+        error: (err) => {
+          console.error('Error returning order to storage:', err);
         }
-      },
-      error: (err) => {
-        console.error('Error returning order to storage:', err);
-      }
-    });
+      });
+    }
     
     // Step 2: Update drone to dead state
     this.apiService.callApi('updateDrone', {
@@ -410,7 +462,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
           }
           
           // Set error message to indicate drone is dead
-          this.errorMessage = 'Drone has crashed and is no longer operational. Order returned to storage.';
+          this.errorMessage = 'Drone has crashed and is no longer operational.';
           
         } else {
           console.error('Failed to update drone to dead state:', droneResponse.message);
@@ -474,13 +526,14 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     const isDroneAssignedToOrder = this.droneDetails.order_id != null;
     const isDroneAvailable = this.droneDetails.is_available;
     
-    // Check if the drone is at the destination
-    const isAtDestination = this.isAtDestination(
-      this.droneDetails.latest_latitude, 
-      this.droneDetails.latest_longitude,
-      this.orderDetails.destination.latitude,
-      this.orderDetails.destination.longitude
-    );
+    // Check if the drone is at the destination (only if we have a real destination)
+    const isAtDestination = this.orderDetails.orderId ? 
+      this.isAtDestination(
+        this.droneDetails.latest_latitude, 
+        this.droneDetails.latest_longitude,
+        this.orderDetails.destination.latitude,
+        this.orderDetails.destination.longitude
+      ) : false;
     
     // Check if the drone is at HQ
     const isAtHQ = this.isAtHQ(
@@ -498,8 +551,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       if (this.batteryDepletionInterval) {
         clearInterval(this.batteryDepletionInterval);
       }
-    } else if (!isDroneAssignedToOrder && !isDroneAvailable && isAtDestination) {
-      // Drone is at destination, no order, not available -> delivered
+    } else if (!isDroneAssignedToOrder && !isDroneAvailable && this.orderDetails.orderId && isAtDestination) {
+      // Drone is at destination, no order, not available -> delivered (but only if we had a real order)
       this.droneState = 'delivered';
       this.keyboardEnabled = true;
       this.startBatteryDepletion();
@@ -595,7 +648,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       case 'returning': return 'Drone has completed the delivery and is returning to base. Use WASD keys to navigate.';
       case 'delivered': return 'Drone has arrived at the delivery destination. Preparing to return to base.';
       case 'completed': return 'Drone has returned to base and completed the mission.';
-      case 'dead': return 'Drone has crashed due to battery failure. Order returned to storage.';
+      case 'dead': return 'Drone has crashed due to battery failure.';
       default: return '';
     }
   }
@@ -607,7 +660,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
     switch (this.droneState) {
       case 'waiting': return 'Not yet started';
       case 'delivering': return 'Approximately 5-10 minutes';
-      case 'returning': return 'Drone has already delivered the package';
+      case 'returning': return 'Returning to headquarters';
       case 'delivered': return 'Package has been delivered';
       case 'completed': return 'Mission completed';
       case 'dead': return 'Mission failed - drone crashed';
@@ -688,7 +741,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
 
       this.addHeadquartersMarker();
       this.addOperationalRadiusCircle();
-      if (this.orderDetails && this.orderDetails.destination) {
+      if (this.orderDetails && this.orderDetails.destination && this.orderDetails.orderId) {
         this.addDestinationMarker();
       }
       if (this.droneDetails) {
@@ -789,8 +842,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
       }
       
       const popupText = this.droneState === 'dead' 
-        ? `Drone ID: ${this.orderDetails?.droneId || 'Unknown'} - CRASHED`
-        : `Drone ID: ${this.orderDetails?.droneId || 'Unknown'}`;
+        ? `Drone ID: ${this.droneDetails?.id || 'Unknown'} - CRASHED`
+        : `Drone ID: ${this.droneDetails?.id || 'Unknown'}`;
       
       this.droneMarker = L.marker(this.droneCoordinates, { icon: droneIcon })
         .addTo(this.map)
@@ -821,7 +874,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
             iconAnchor: [14, 14]
           });
           this.droneMarker.setIcon(crashedIcon);
-          this.droneMarker.setPopupContent(`Drone ID: ${this.orderDetails?.droneId || 'Unknown'} - CRASHED`);
+          this.droneMarker.setPopupContent(`Drone ID: ${this.droneDetails?.id || 'Unknown'} - CRASHED`);
         }
         
         console.log(`Drone marker updated to: ${this.droneCoordinates}`);
@@ -940,8 +993,8 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
           this.droneDetails!.latest_longitude = longitude;
           this.updateDronePosition();
           
-          // Check if drone reached destination while delivering
-          if (this.droneState === 'delivering' && this.orderDetails) {
+          // Check if drone reached destination while delivering (only if we have a real destination)
+          if (this.droneState === 'delivering' && this.orderDetails && this.orderDetails.orderId) {
             if (this.isAtDestination(
               adjustedLatitude, 
               longitude, 
@@ -983,7 +1036,7 @@ export class Track implements OnInit, AfterViewInit, OnDestroy {
    * Handle when the drone has arrived at the delivery destination
    */
   private handleDeliveryCompleted(): void {
-    if (!this.droneDetails || !this.orderDetails || this.isDroneDead) return;
+    if (!this.droneDetails || !this.orderDetails || this.isDroneDead || !this.orderDetails.orderId) return;
     
     window.alert(`Package delivered successfully to ${this.orderDetails.customer}! Please fly the drone back to headquarters.`);
     this.droneState = 'delivered';

@@ -1,7 +1,7 @@
 <div class="track-container">
   <!-- Header with back button -->
   <div class="track-header">
-    <h2>Track Order {{ orderId }}</h2>
+    <h2>Track Drone {{ droneId }}</h2>
   </div>
   
   <!-- State bar to show current status -->
@@ -9,7 +9,8 @@
        [ngClass]="{'state-delivering': droneState === 'delivering', 
                   'state-returning': droneState === 'returning', 
                   'state-delivered': droneState === 'delivered',
-                  'state-completed': droneState === 'completed'}">
+                  'state-completed': droneState === 'completed',
+                  'state-dead': droneState === 'dead'}">
     <div class="state-bar-content">
       <span class="state-label">{{ getStateLabelText() }}</span>
       <span class="state-message">{{ getStateMessageText() }}</span>
@@ -22,7 +23,7 @@
       <!-- Left panel with order details -->
       <div class="details-panel">
         <!-- Drone status card -->
-        <div class="drone-status-card" *ngIf="droneDetails">
+        <div class="drone-status-card" *ngIf="droneDetails" [ngClass]="{'dead': droneState === 'dead'}">
           <h3>Drone Status</h3>
           <div class="info-list">
             <div class="info-item">
@@ -34,8 +35,15 @@
             <div class="info-item">
               <span class="info-label">Battery:</span>
               <span class="info-value">
-                <div class="battery-indicator">
-                  <span [style.width.%]="droneDetails.battery_level" class="battery-level"></span>
+                <div class="battery-indicator" [ngClass]="{'dead': droneState === 'dead'}">
+                  <span [style.width.%]="droneDetails.battery_level" 
+                        class="battery-level"
+                        [ngClass]="{
+                          'critical': droneDetails.battery_level <= 20,
+                          'low': droneDetails.battery_level > 20 && droneDetails.battery_level <= 40,
+                          'medium': droneDetails.battery_level > 40 && droneDetails.battery_level <= 70,
+                          'high': droneDetails.battery_level > 70
+                        }"></span>
                   {{ droneDetails.battery_level }}%
                 </div>
               </span>
@@ -53,8 +61,12 @@
         
         <!-- Order info card -->
         <div class="order-info-card">
-          <h3>Order Information</h3>
+          <h3>{{ orderDetails.orderId ? 'Order Information' : 'Drone Mission' }}</h3>
           <div class="info-list">
+            <div class="info-item" *ngIf="orderDetails.orderId">
+              <span class="info-label">Order ID:</span>
+              <span class="info-value">{{ orderDetails.orderId }}</span>
+            </div>
             <div class="info-item">
               <span class="info-label">Customer:</span>
               <span class="info-value">{{ orderDetails.customer }}</span>
@@ -63,7 +75,7 @@
               <span class="info-label">Products:</span>
               <span class="info-value">{{ orderDetails.products.join(', ') }}</span>
             </div>
-            <div class="info-item">
+            <div class="info-item" *ngIf="orderDetails.orderId">
               <span class="info-label">Destination:</span>
               <span class="info-value">{{ orderDetails.destination.latitude.toFixed(4) }}, {{ orderDetails.destination.longitude.toFixed(4) }}</span>
             </div>
@@ -74,6 +86,10 @@
             <div class="info-item">
               <span class="info-label">Operation Center:</span>
               <span class="info-value">Hatfield, Pretoria</span>
+            </div>
+            <div class="info-item" *ngIf="orderDetails.trackingNum && orderDetails.orderId">
+              <span class="info-label">Tracking Number:</span>
+              <span class="info-value">{{ orderDetails.trackingNum }}</span>
             </div>
           </div>
         </div>
@@ -92,7 +108,7 @@
             <span class="legend-marker hq"></span>
             <span>Headquarters</span>
           </div>
-          <div class="legend-item">
+          <div class="legend-item" *ngIf="orderDetails.orderId">
             <span class="legend-marker destination"></span>
             <span>Destination</span>
           </div>
@@ -109,9 +125,26 @@
   <ng-template #noOrder>
     <div class="error-message">
       <div class="error-icon">!</div>
-      <h3>Order Not Found</h3>
-      <p>Order information could not be loaded or this order doesn't exist.</p>
+      <h3>Drone Not Found</h3>
+      <p>Drone information could not be loaded or this drone doesn't exist.</p>
       <button (click)="returnToDispatched()" class="return-btn">Return to Drone Orders</button>
     </div>
   </ng-template>
+
+  <!-- Dead drone warning overlay -->
+  <div *ngIf="droneState === 'dead'" class="dead-drone-overlay">
+    <div class="dead-drone-warning">
+      <div class="warning-icon">⚠️</div>
+      <h3>DRONE CRASHED</h3>
+      <p><strong>Drone #{{ droneDetails?.id }} has suffered a critical failure!</strong></p>
+      <p>The drone has exceeded safe operating parameters and has crashed.</p>
+      <ul>
+        <li>Battery Level: {{ droneDetails?.battery_level }}%</li>
+        <li>Last Altitude: {{ droneDetails?.altitude }}m</li>
+        <li>Status: Non-operational</li>
+      </ul>
+      <p *ngIf="orderDetails?.orderId">The associated order has been returned to storage for reassignment.</p>
+      <button (click)="returnToDispatched()" class="return-btn">Return to Dashboard</button>
+    </div>
+  </div>
 </div>

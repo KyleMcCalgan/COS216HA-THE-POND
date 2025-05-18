@@ -270,7 +270,7 @@ export class DispatchedOrders implements OnInit {
     
     return {
       orderId: order.order_id,
-      orderIdStr: String(order.order_id), // For routing
+      orderIdStr: String(order.order_id), // For routing - still use order ID for waiting/delivering
       products: productsList,
       status: order.state,
       destination: formattedAddress,
@@ -308,40 +308,42 @@ export class DispatchedOrders implements OnInit {
     }
   }
 
-  // Navigate to track page for specific order
-  trackOrder(orderId: string) {
-    console.log('Tracking order:', orderId);
-    if (!orderId) {
-      console.error('Cannot track order: No order ID provided');
+  // Navigate to track page - UPDATED TO USE DRONE ID
+  trackOrder(orderIdStr: string) {
+    console.log('Tracking order/drone:', orderIdStr);
+    if (!orderIdStr) {
+      console.error('Cannot track: No order/drone ID provided');
       return;
     }
     
     // Check if this is a returning drone (will start with 'drone-')
-    if (orderId.startsWith('drone-')) {
-      const droneId = orderId.split('-')[1];
-      console.log(`This is a returning drone (ID: ${droneId}). Navigating with drone tracking mode...`);
-      
-      // For returning drones, pass the drone ID in the route
-      // We'll modify the route to accept a drone mode
-      this.router.navigate(['/operator/track', orderId]);
+    if (orderIdStr.startsWith('drone-')) {
+      // For returning drones, pass the drone ID directly
+      console.log(`This is a returning drone. Navigating with: ${orderIdStr}`);
+      this.router.navigate(['/operator/track', orderIdStr]);
       return;
     }
     
-    // Find the order in our filtered orders
-    const order = this.filteredOrders.find(o => o.orderIdStr === orderId);
+    // For regular orders (waiting/delivering), find the drone ID and use that
+    const order = this.filteredOrders.find(o => o.orderIdStr === orderIdStr);
     
-    // If this is a waiting drone (START button was clicked), update the drone status first
-    if (order && order.droneStatus === 'waiting') {
-      this.updateDroneStatus(order.droneId, false).then(() => {
-        this.router.navigate(['/operator/track', orderId]);
-      }).catch(error => {
-        console.error('Error updating drone status:', error);
-        // Navigate anyway, even if there was an error
-        this.router.navigate(['/operator/track', orderId]);
-      });
+    if (order) {
+      // If this is a waiting drone (START button was clicked), update the drone status first
+      if (order.droneStatus === 'waiting') {
+        this.updateDroneStatus(order.droneId, false).then(() => {
+          // Navigate using drone ID format
+          this.router.navigate(['/operator/track', `drone-${order.droneId}`]);
+        }).catch(error => {
+          console.error('Error updating drone status:', error);
+          // Navigate anyway, even if there was an error
+          this.router.navigate(['/operator/track', `drone-${order.droneId}`]);
+        });
+      } else {
+        // For regular "Track Order" button (already delivering), navigate using drone ID
+        this.router.navigate(['/operator/track', `drone-${order.droneId}`]);
+      }
     } else {
-      // For regular "Track Order" button (already delivering), just navigate
-      this.router.navigate(['/operator/track', orderId]);
+      console.error('Order not found in filtered orders');
     }
   }
   
