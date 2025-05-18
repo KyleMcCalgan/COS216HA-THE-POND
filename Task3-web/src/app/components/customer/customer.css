@@ -5,6 +5,37 @@
   margin: 0 auto;
   padding: 30px 20px;
   font-family: Arial, sans-serif;
+  position: relative;
+}
+
+/* Top actions container */
+.top-actions {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+}
+
+.game-btn-top {
+  padding: 10px 18px;
+  background-color: #9C27B0;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
+}
+
+.game-btn-top:hover {
+  background-color: #7B1FA2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
 }
 
 h2 {
@@ -12,6 +43,7 @@ h2 {
   margin-bottom: 25px;
   text-align: center;
   font-size: 28px;
+  margin-top: 40px;
 }
 
 h3 {
@@ -292,7 +324,22 @@ h3 {
 /* Responsive styles */
 @media (max-width: 768px) {
   .customer-container {
-    padding: 20px 10px;
+    padding: 60px 10px 20px;
+  }
+  
+  .top-actions {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .game-btn-top {
+    padding: 8px 15px;
+    font-size: 13px;
+  }
+  
+  h2 {
+    margin-top: 20px;
+    font-size: 24px;
   }
   
   .navigation-tabs {

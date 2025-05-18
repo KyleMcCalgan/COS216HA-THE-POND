@@ -1,0 +1,36 @@
+<div class="flappy-drone-container">
+  <div class="game-header">
+    <h1>Flappy Drone</h1>
+    <button class="back-btn" (click)="returnToDashboard()">
+      <i class="back-icon">←</i> Back to Dashboard
+    </button>
+  </div>
+  
+  <div class="game-wrapper">
+    <canvas #gameCanvas 
+            class="game-canvas"
+            (click)="handleClick()">
+    </canvas>
+    
+    <div class="game-info">
+      <div class="score-display">
+        <h3>Score: {{ score }}</h3>
+        <p>Best: {{ highScore }}</p>
+      </div>
+      
+      <div class="controls-info">
+        <h4>How to Play:</h4>
+        <ul>
+          <li><strong>SPACE</strong> or <strong>CLICK</strong> to make the drone fly up</li>
+          <li>Navigate through the buildings</li>
+          <li><strong>ESC</strong> to return to dashboard</li>
+        </ul>
+      </div>
+      
+      <div class="game-stats" *ngIf="gameState === 'gameOver'">
+        <h4>Final Score: {{ score }}</h4>
+        <p *ngIf="score === highScore" class="new-record">🎉 New High Score! 🎉</p>
+      </div>
+    </div>
+  </div>
+</div>

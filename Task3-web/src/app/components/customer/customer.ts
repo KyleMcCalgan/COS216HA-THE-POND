@@ -139,6 +139,10 @@ export class Customer implements OnInit {
     this.router.navigate(['/customer/new-order']);
   }
   
+  navigateToGame() {
+    this.router.navigate(['/customer/flappy-drone']);
+  }
+  
   // Method to change which section is shown
   showSection(section: string) {
     this.activeSection = section;
