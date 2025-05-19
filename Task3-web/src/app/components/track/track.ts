@@ -246,7 +246,7 @@ ngOnInit() {
     is_available: droneData.is_available === true,
     latest_latitude: adjustedLatitude,
     latest_longitude: parseFloat(droneData.latest_longitude) || 0,
-    altitude: parseFloat(droneData.altitude) || 0,
+    altitude: parseFloat(droneData.altitude) || 20,
     battery_level: parseInt(droneData.battery_level) || 100,
     current_operator_id: droneData.current_operator_id,
     order_id: droneData.order_id || droneData.Order_ID
