@@ -216,7 +216,7 @@ h2 {
 }
 
 /* Floating back button */
-.track-container::before {
+/* .track-container::before {
   content: "← Back to Drone Orders";
   position: fixed;
   top: 16px;
@@ -230,7 +230,7 @@ h2 {
   cursor: pointer;
   z-index: 1000;
   transition: all 0.3s ease;
-}
+} */
 
 .track-container::before:hover {
   background-color: #3E7A3A;
