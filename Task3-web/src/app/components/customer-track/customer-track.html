@@ -51,7 +51,14 @@
 
     <!-- Map Section -->
     <div class="map-section">
-      <h3>Live Location</h3>
+      <div class="map-header">
+        <h3>Live Location</h3>
+        <!-- Drone customization button -->
+        <button class="customize-drone-btn" (click)="openImageSelector()" *ngIf="droneDetails">
+          <span class="icon">🎨</span>
+          Customize Drone
+        </button>
+      </div>
       <div class="map-container">
         <div id="customer-map"></div>
         <div class="map-legend">
@@ -93,6 +100,41 @@
     <!-- Back to Orders -->
     <div class="actions">
       <button routerLink="/customer" class="back-btn">Back to My Orders</button>
+    </div>
+  </div>
+
+  <!-- Drone Image Selector Modal -->
+  <div *ngIf="showImageSelector" class="image-selector-overlay" (click)="closeImageSelector()">
+    <div class="image-selector-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Choose Your Drone Style</h3>
+        <button class="close-btn" (click)="closeImageSelector()">×</button>
+      </div>
+      <div class="modal-content">
+        <div class="drone-images-grid">
+          <div *ngFor="let droneImage of availableDroneImages" 
+               class="drone-image-option"
+               [class.selected]="selectedDroneImage === droneImage.filename"
+               (click)="selectDroneImage(droneImage.filename)">
+            <div class="image-wrapper">
+              <img [src]="'assets/' + droneImage.filename" 
+                   [alt]="droneImage.name"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <!-- Fallback icon if image doesn't load -->
+              <div class="image-fallback" style="display: none;">
+                <span class="drone-icon">🚁</span>
+              </div>
+            </div>
+            <span class="image-name">{{ droneImage.name }}</span>
+            <div *ngIf="selectedDroneImage === droneImage.filename" class="selected-indicator">
+              <span class="checkmark">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="apply-btn" (click)="closeImageSelector()">Apply Selection</button>
+      </div>
     </div>
   </div>
 </div>

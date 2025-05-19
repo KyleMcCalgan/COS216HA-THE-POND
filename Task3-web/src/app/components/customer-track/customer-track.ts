@@ -24,6 +24,18 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
   private mapInitialized: boolean = false;
   private updateInterval: any = null;
   
+  // Drone image customization properties
+  showImageSelector = false;
+  selectedDroneImage = 'drone-icon.png'; // Default drone image
+  availableDroneImages = [
+    { name: 'Default Drone', filename: 'drone-icon.png' },
+    { name: 'Drone Style 2', filename: 'drone-icon2.png' },
+    { name: 'Drone Style 3', filename: 'drone-icon1.png' },
+    { name: 'Drone Style 4', filename: 'drone-icon3.png' },
+    { name: 'Drone Style 5', filename: 'drone-icon4.png' },
+    { name: 'Drone Style 6', filename: 'drone-icon5.png' }
+  ];
+  
   // HQ coordinates
   private readonly HQ_LAT = 25.7472;
   private readonly HQ_LNG = 28.2511;
@@ -35,6 +47,12 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    // Load saved drone image preference from localStorage
+    const savedImage = localStorage.getItem('selectedDroneImage');
+    if (savedImage) {
+      this.selectedDroneImage = savedImage;
+    }
+
     this.route.paramMap.subscribe(params => {
       this.orderId = params.get('orderId');
       if (this.orderId) {
@@ -60,6 +78,56 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
     if (this.map) {
       this.map.remove();
       this.map = null;
+    }
+  }
+
+  // Drone image customization methods
+  openImageSelector() {
+    this.showImageSelector = true;
+  }
+
+  closeImageSelector() {
+    this.showImageSelector = false;
+  }
+
+  selectDroneImage(imageFilename: string) {
+    this.selectedDroneImage = imageFilename;
+    
+    // Save preference to localStorage
+    localStorage.setItem('selectedDroneImage', imageFilename);
+    
+    // Update the drone marker with the new image
+    this.updateDroneMarkerImage();
+    
+    // Close the selector
+    this.closeImageSelector();
+  }
+
+  private updateDroneMarkerImage() {
+    if (this.droneMarker && this.map) {
+      const currentLatLng = this.droneMarker.getLatLng();
+      
+      // Create new icon with selected image
+      let droneIcon: L.Icon | L.DivIcon;
+      try {
+        droneIcon = L.icon({
+          iconUrl: `assets/${this.selectedDroneImage}`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          popupAnchor: [0, -16]
+        });
+      } catch (e) {
+        // Fallback to div icon if image fails to load
+        droneIcon = L.divIcon({
+          className: 'drone-marker',
+          html: '<div style="background-color: #2196F3; width: 12px; height: 12px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        });
+      }
+      
+      // Update the existing marker's icon
+      this.droneMarker.setIcon(droneIcon);
     }
   }
 
@@ -223,7 +291,7 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
         .bindPopup('Delivery Destination');
     }
 
-    // Add/update drone marker
+    // Add/update drone marker with selected image
     if (this.droneDetails) {
       const droneCoords: L.LatLngExpression = [
         this.droneDetails.latest_latitude,
@@ -234,7 +302,7 @@ export class CustomerTrack implements OnInit, AfterViewInit, OnDestroy {
       let droneIcon: L.Icon | L.DivIcon;
       try {
         droneIcon = L.icon({
-          iconUrl: 'assets/drone-icon.png',
+          iconUrl: `assets/${this.selectedDroneImage}`,
           iconSize: [32, 32],
           iconAnchor: [16, 16],
           popupAnchor: [0, -16]
